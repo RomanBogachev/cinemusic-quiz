@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth";
+import { getMediaTypeFromQuizType } from "@/lib/mediaTypes";
 import { prisma } from "@/lib/prisma";
 import { questionUpdateSchema } from "@/lib/validation";
 
@@ -17,7 +18,33 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
   const authError = requireAdmin();
   if (authError) return authError;
 
-  const parsed = questionUpdateSchema.safeParse(await request.json());
+  const body = (await request.json()) as { topicCardId?: string; mediaType?: string };
+  const existingQuestion = await prisma.question.findUnique({
+    where: { id: params.id },
+    include: { topicCard: { include: { quizType: true } } }
+  });
+  if (!existingQuestion) {
+    return NextResponse.json({ error: "Вопрос не найден" }, { status: 404 });
+  }
+
+  const nextTopic = body.topicCardId && body.topicCardId !== existingQuestion.topicCardId
+    ? await prisma.topicCard.findUnique({ where: { id: body.topicCardId }, include: { quizType: true } })
+    : existingQuestion.topicCard;
+  if (!nextTopic) {
+    return NextResponse.json({ error: "Тема не найдена" }, { status: 400 });
+  }
+
+  const existingExpectedMediaType = getMediaTypeFromQuizType(existingQuestion.topicCard.quizType.type);
+  const nextExpectedMediaType = getMediaTypeFromQuizType(nextTopic.quizType.type);
+  const keepsLegacyMismatch =
+    existingQuestion.mediaType !== existingExpectedMediaType &&
+    nextTopic.id === existingQuestion.topicCardId &&
+    (!body.mediaType || body.mediaType === existingQuestion.mediaType);
+
+  const parsed = questionUpdateSchema.safeParse({
+    ...body,
+    mediaType: keepsLegacyMismatch ? existingQuestion.mediaType : nextExpectedMediaType
+  });
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Некорректные данные" }, { status: 400 });
   }

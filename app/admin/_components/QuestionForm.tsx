@@ -1,15 +1,18 @@
 "use client";
 
-import type { Question, TopicCard } from "@prisma/client";
+import type { Question, QuizType, TopicCard } from "@prisma/client";
 import { Save } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AudioWaveformEditor } from "@/components/AudioWaveformEditor";
 import { MediaUploadField } from "@/components/MediaUploadField";
+import { getMediaTypeDescription, getMediaTypeFromQuizType, MEDIA_TYPE_LABELS } from "@/lib/mediaTypes";
 import type { QuestionMediaType } from "@/lib/types";
 
+type TopicWithQuizType = TopicCard & { quizType: QuizType };
+
 type QuestionFormProps = {
-  topics: TopicCard[];
+  topics: TopicWithQuizType[];
   question?: Question;
   initialTopicId?: string;
 };
@@ -18,8 +21,8 @@ export function QuestionForm({ topics, question, initialTopicId }: QuestionFormP
   const router = useRouter();
   const [topicCardId, setTopicCardId] = useState(question?.topicCardId ?? initialTopicId ?? topics[0]?.id ?? "");
   const selectedTopic = useMemo(() => topics.find((topic) => topic.id === topicCardId), [topics, topicCardId]);
-  const defaultMedia = selectedTopic?.quizTypeId ? undefined : "image";
-  const [mediaType, setMediaType] = useState<QuestionMediaType>((question?.mediaType as QuestionMediaType | undefined) ?? (defaultMedia as QuestionMediaType) ?? "image");
+  const expectedMediaType = selectedTopic ? getMediaTypeFromQuizType(selectedTopic.quizType.type) : "image";
+  const [mediaType, setMediaType] = useState<QuestionMediaType>((question?.mediaType as QuestionMediaType | undefined) ?? expectedMediaType);
   const [title, setTitle] = useState(question?.title ?? "");
   const [answer, setAnswer] = useState(question?.answer ?? "");
   const [mediaFilePath, setMediaFilePath] = useState(question?.mediaFilePath ?? "");
@@ -31,6 +34,13 @@ export function QuestionForm({ topics, question, initialTopicId }: QuestionFormP
   const [loading, setLoading] = useState(false);
 
   const uploadKind = mediaType === "image" ? "image" : mediaType === "audio" ? "audio" : "video";
+  const mediaMismatch = Boolean(question && selectedTopic && question.topicCardId === topicCardId && question.mediaType !== expectedMediaType);
+
+  useEffect(() => {
+    if (!question || question.topicCardId !== topicCardId) {
+      setMediaType(expectedMediaType);
+    }
+  }, [expectedMediaType, question, topicCardId]);
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -62,51 +72,54 @@ export function QuestionForm({ topics, question, initialTopicId }: QuestionFormP
   }
 
   return (
-    <form onSubmit={submit} className={`apple-card p-6 ${mediaType === "audio" ? "max-w-5xl" : "max-w-3xl"}`}>
-      <div className="grid gap-5">
-        <label>
-          <span className="mb-2 block text-sm font-semibold text-muted">Тема</span>
-          <select className="input" value={topicCardId} onChange={(event) => setTopicCardId(event.target.value)}>
-            {topics.map((topic) => (
-              <option key={topic.id} value={topic.id}>
-                {topic.title}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          <span className="mb-2 block text-sm font-semibold text-muted">Тип медиа</span>
-          <select className="input" value={mediaType} onChange={(event) => setMediaType(event.target.value as QuestionMediaType)}>
-            <option value="image">Фото</option>
-            <option value="audio">Музыка</option>
-            <option value="video">Видео</option>
-          </select>
-        </label>
-        <label>
-          <span className="mb-2 block text-sm font-semibold text-muted">Заголовок вопроса</span>
-          <input className="input" value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Необязательно" />
-        </label>
-        <label>
-          <span className="mb-2 block text-sm font-semibold text-muted">Правильный ответ</span>
-          <input className="input" value={answer} onChange={(event) => setAnswer(event.target.value)} required />
-        </label>
-        <div>
-          <span className="mb-2 block text-sm font-semibold text-muted">Медиафайл</span>
-          <MediaUploadField kind={uploadKind} value={mediaFilePath} onChange={setMediaFilePath} />
-        </div>
-        {mediaType === "audio" && (
-          <div className="grid gap-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <label>
-                <span className="mb-2 block text-sm font-semibold text-muted">Начало, сек</span>
-                <input className="input" type="number" min="0" step="0.001" value={audioStart} onChange={(event) => setAudioStart(event.target.value)} />
-              </label>
-              <label>
-                <span className="mb-2 block text-sm font-semibold text-muted">Конец, сек</span>
-                <input className="input" type="number" min="0" step="0.001" value={question?.audioEnd?.toString() ?? ""} readOnly />
-              </label>
+    <form onSubmit={submit} className="apple-card w-full p-5 md:p-7">
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">
+        <div className="grid content-start gap-5">
+          <div className="grid gap-5 lg:grid-cols-2">
+            <label>
+              <span className="mb-2 block text-sm font-semibold text-muted">Тема</span>
+              <select
+                className="input"
+                value={topicCardId}
+                onChange={(event) => {
+                  const nextTopicId = event.target.value;
+                  setTopicCardId(nextTopicId);
+                  const nextTopic = topics.find((topic) => topic.id === nextTopicId);
+                  if (nextTopic) setMediaType(getMediaTypeFromQuizType(nextTopic.quizType.type));
+                }}
+              >
+                {topics.map((topic) => (
+                  <option key={topic.id} value={topic.id}>
+                    {topic.title}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div>
+              <span className="mb-2 block text-sm font-semibold text-muted">Тип медиа</span>
+              <div className="rounded-[18px] border border-black/[0.06] bg-primary/[0.06] p-4">
+                <div className="inline-flex rounded-full bg-primary/10 px-3 py-1 text-sm font-bold text-primary">
+                  Тип медиа: {MEDIA_TYPE_LABELS[mediaType]}
+                </div>
+                {selectedTopic && <p className="mt-3 text-sm leading-6 text-muted">{getMediaTypeDescription(selectedTopic.quizType.name, expectedMediaType)}</p>}
+                {mediaMismatch && (
+                  <p className="mt-2 text-sm leading-6 text-warning">
+                    У этого существующего вопроса тип медиа отличается от категории темы. При смене темы тип будет выбран автоматически.
+                  </p>
+                )}
+              </div>
             </div>
-            {question && mediaFilePath ? (
+          </div>
+          <label>
+            <span className="mb-2 block text-sm font-semibold text-muted">Заголовок вопроса</span>
+            <input className="input" value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Необязательно" />
+          </label>
+          <label>
+            <span className="mb-2 block text-sm font-semibold text-muted">Правильный ответ</span>
+            <input className="input" value={answer} onChange={(event) => setAnswer(event.target.value)} required />
+          </label>
+          {mediaType === "audio" && question && mediaFilePath && (
+            <div className="min-w-0">
               <AudioWaveformEditor
                 questionId={question.id}
                 src={mediaFilePath}
@@ -114,15 +127,38 @@ export function QuestionForm({ topics, question, initialTopicId }: QuestionFormP
                 initialEnd={question.audioEnd}
                 onSaved={() => router.refresh()}
               />
-            ) : (
-              <div className="rounded-3xl border border-black/[0.06] bg-black/[0.03] p-5 text-sm text-muted">
-                Сначала сохраните аудиовопрос, затем откройте его редактирование и нарежьте фрагменты во встроенном waveform-редакторе.
-              </div>
-            )}
+            </div>
+          )}
+        </div>
+
+        <aside className="grid content-start gap-5">
+          <div>
+            <span className="mb-2 block text-sm font-semibold text-muted">Медиафайл</span>
+            <MediaUploadField kind={uploadKind} value={mediaFilePath} onChange={setMediaFilePath} />
           </div>
-        )}
-        {mediaType === "video" && (
-          <div className="grid gap-4 sm:grid-cols-2">
+
+          {mediaType === "audio" && (
+            <div className="grid gap-4">
+              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
+                <label>
+                  <span className="mb-2 block text-sm font-semibold text-muted">Начало, сек</span>
+                  <input className="input" type="number" min="0" step="0.001" value={audioStart} onChange={(event) => setAudioStart(event.target.value)} />
+                </label>
+                <label>
+                  <span className="mb-2 block text-sm font-semibold text-muted">Конец, сек</span>
+                  <input className="input" type="number" min="0" step="0.001" value={question?.audioEnd?.toString() ?? ""} readOnly />
+                </label>
+              </div>
+              {(!question || !mediaFilePath) && (
+                <div className="rounded-3xl border border-black/[0.06] bg-black/[0.03] p-5 text-sm text-muted">
+                  Сначала сохраните аудиовопрос, затем откройте его редактирование и нарежьте фрагменты во встроенном waveform-редакторе.
+                </div>
+              )}
+            </div>
+          )}
+
+          {mediaType === "video" && (
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
             <label>
               <span className="mb-2 block text-sm font-semibold text-muted">videoStart, сек</span>
               <input className="input" type="number" min="0" step="0.1" value={videoStart} onChange={(event) => setVideoStart(event.target.value)} />
@@ -131,18 +167,22 @@ export function QuestionForm({ topics, question, initialTopicId }: QuestionFormP
               <span className="mb-2 block text-sm font-semibold text-muted">videoEnd, сек</span>
               <input className="input" type="number" min="0" step="0.1" value={videoEnd} onChange={(event) => setVideoEnd(event.target.value)} />
             </label>
-          </div>
-        )}
-        <label>
-          <span className="mb-2 block text-sm font-semibold text-muted">Порядок</span>
-          <input className="input" type="number" min="0" step="1" value={sortOrder} onChange={(event) => setSortOrder(event.target.value)} />
-        </label>
+            </div>
+          )}
+
+          <label>
+            <span className="mb-2 block text-sm font-semibold text-muted">Порядок</span>
+            <input className="input" type="number" min="0" step="1" value={sortOrder} onChange={(event) => setSortOrder(event.target.value)} />
+          </label>
+        </aside>
       </div>
       {error && <p className="mt-4 text-sm text-danger">{error}</p>}
-      <button type="submit" className="btn btn-primary mt-6" disabled={loading}>
-        <Save size={18} />
-        {loading ? "Сохраняю..." : "Сохранить вопрос"}
-      </button>
+      <div className="mt-7 flex justify-end border-t border-black/[0.06] pt-5">
+        <button type="submit" className="btn btn-primary w-full sm:w-auto" disabled={loading}>
+          <Save size={18} />
+          {loading ? "Сохраняю..." : "Сохранить вопрос"}
+        </button>
+      </div>
     </form>
   );
 }

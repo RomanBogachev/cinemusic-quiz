@@ -8,8 +8,8 @@ import { prisma } from "@/lib/prisma";
 export default async function NewQuestionPage({ params }: { params: { id: string } }) {
   if (!isAdminAuthenticated()) redirect("/admin");
   const [topic, topics] = await Promise.all([
-    prisma.topicCard.findUnique({ where: { id: params.id } }),
-    prisma.topicCard.findMany({ orderBy: { title: "asc" } })
+    prisma.topicCard.findUnique({ where: { id: params.id }, include: { quizType: true } }),
+    prisma.topicCard.findMany({ include: { quizType: true }, orderBy: { title: "asc" } })
   ]);
   if (!topic) notFound();
 

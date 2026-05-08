@@ -40,36 +40,43 @@ export function TopicForm({ quizTypes, topic }: TopicFormProps) {
   }
 
   return (
-    <form onSubmit={submit} className="apple-card max-w-3xl p-6">
-      <div className="grid gap-5">
-        <label>
-          <span className="mb-2 block text-sm font-semibold text-muted">Тип категории</span>
-          <select className="input" value={quizTypeId} onChange={(event) => setQuizTypeId(event.target.value)}>
-            {quizTypes.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          <span className="mb-2 block text-sm font-semibold text-muted">Название</span>
-          <input className="input" value={title} onChange={(event) => setTitle(event.target.value)} required />
-        </label>
-        <label>
-          <span className="mb-2 block text-sm font-semibold text-muted">Описание</span>
-          <textarea className="input min-h-28" value={description} onChange={(event) => setDescription(event.target.value)} required />
-        </label>
-        <div>
-          <span className="mb-2 block text-sm font-semibold text-muted">Обложка</span>
-          <MediaUploadField kind="cover" value={coverImage} onChange={setCoverImage} />
+    <form onSubmit={submit} className="apple-card w-full p-5 md:p-7">
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">
+        <div className="grid content-start gap-5">
+          <label>
+            <span className="mb-2 block text-sm font-semibold text-muted">Название</span>
+            <input className="input" value={title} onChange={(event) => setTitle(event.target.value)} required />
+          </label>
+          <label>
+            <span className="mb-2 block text-sm font-semibold text-muted">Описание</span>
+            <textarea className="input min-h-40" value={description} onChange={(event) => setDescription(event.target.value)} required />
+          </label>
+          <label>
+            <span className="mb-2 block text-sm font-semibold text-muted">Тип категории</span>
+            <select className="input" value={quizTypeId} onChange={(event) => setQuizTypeId(event.target.value)}>
+              {quizTypes.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <div className="grid content-start gap-3">
+          <div>
+            <span className="mb-2 block text-sm font-semibold text-muted">Обложка</span>
+            <MediaUploadField kind="cover" value={coverImage} onChange={setCoverImage} />
+          </div>
+          <p className="text-sm leading-6 text-muted">Обложка будет сохранена в формате 16:9 и красиво отобразится в сетке тем.</p>
         </div>
       </div>
       {error && <p className="mt-4 text-sm text-danger">{error}</p>}
-      <button type="submit" className="btn btn-primary mt-6" disabled={loading}>
-        <Save size={18} />
-        {loading ? "Сохраняю..." : "Сохранить"}
-      </button>
+      <div className="mt-7 flex justify-end border-t border-black/[0.06] pt-5">
+        <button type="submit" className="btn btn-primary w-full sm:w-auto" disabled={loading}>
+          <Save size={18} />
+          {loading ? "Сохраняю..." : "Сохранить"}
+        </button>
+      </div>
     </form>
   );
 }

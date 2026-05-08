@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth";
+import { getMediaTypeFromQuizType } from "@/lib/mediaTypes";
 import { prisma } from "@/lib/prisma";
 import { questionSchema } from "@/lib/validation";
 
@@ -44,7 +45,18 @@ export async function POST(request: NextRequest) {
   const authError = requireAdmin();
   if (authError) return authError;
 
-  const parsed = questionSchema.safeParse(await request.json());
+  const body = (await request.json()) as { topicCardId?: string };
+  const topic = body.topicCardId
+    ? await prisma.topicCard.findUnique({ where: { id: body.topicCardId }, include: { quizType: true } })
+    : null;
+  if (!topic) {
+    return NextResponse.json({ error: "Тема не найдена" }, { status: 400 });
+  }
+
+  const parsed = questionSchema.safeParse({
+    ...body,
+    mediaType: getMediaTypeFromQuizType(topic.quizType.type)
+  });
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Некорректные данные" }, { status: 400 });
   }

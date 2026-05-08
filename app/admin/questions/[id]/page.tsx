@@ -9,7 +9,7 @@ export default async function EditQuestionPage({ params }: { params: { id: strin
   if (!isAdminAuthenticated()) redirect("/admin");
   const [question, topics] = await Promise.all([
     prisma.question.findUnique({ where: { id: params.id } }),
-    prisma.topicCard.findMany({ orderBy: { title: "asc" } })
+    prisma.topicCard.findMany({ include: { quizType: true }, orderBy: { title: "asc" } })
   ]);
   if (!question) notFound();
 
