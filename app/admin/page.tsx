@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Plus, Rows3 } from "lucide-react";
 import { AdminLayout } from "@/components/AdminLayout";
 import { AdminLoginForm } from "@/app/admin/_components/AdminLoginForm";
+import { LatestQuestionsTable } from "@/app/admin/_components/LatestQuestionsTable";
 import { CinemaBackground } from "@/components/CinemaBackground";
 import { isAdminAuthenticated } from "@/lib/auth";
 import { ensureCategories } from "@/lib/ensureCategories";
@@ -25,7 +26,7 @@ export default async function AdminPage() {
       <CinemaBackground />
       <section className="grid gap-5 md:grid-cols-2">
         <div className="apple-card p-7">
-          <div className="text-sm font-bold uppercase tracking-[0.18em] text-primary/70">Карточки</div>
+          <div className="text-sm font-bold uppercase tracking-[0.18em] text-primary/70">Темы</div>
           <div className="mt-2 text-6xl font-extrabold tracking-[-0.04em] text-foreground">{topics}</div>
         </div>
         <div className="apple-card p-7">
@@ -36,13 +37,14 @@ export default async function AdminPage() {
       <div className="mt-6 flex flex-wrap gap-3">
         <Link href="/admin/topics/new" className="btn btn-primary">
           <Plus size={18} />
-          Создать карточку
+          Создать тему
         </Link>
         <Link href="/admin/topics" className="btn btn-ghost">
           <Rows3 size={18} />
-          Управлять карточками
+          Управлять темами
         </Link>
       </div>
+      <LatestQuestionsTable />
     </AdminLayout>
   );
 }

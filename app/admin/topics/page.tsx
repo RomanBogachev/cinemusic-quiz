@@ -21,12 +21,12 @@ export default async function AdminTopicsPage() {
       <CinemaBackground />
       <div className="mb-6 flex flex-col justify-between gap-4 md:flex-row md:items-end">
         <div>
-          <h1 className="text-4xl font-extrabold tracking-[-0.04em] text-foreground">Тематические карточки</h1>
+          <h1 className="text-4xl font-extrabold tracking-[-0.04em] text-foreground">Темы</h1>
           <p className="mt-2 text-muted">Создавайте темы и наполняйте их вопросами.</p>
         </div>
         <Link href="/admin/topics/new" className="btn btn-primary">
           <Plus size={18} />
-          Новая карточка
+          Новая тема
         </Link>
       </div>
       <div className="space-y-3">
@@ -50,7 +50,7 @@ export default async function AdminTopicsPage() {
             </div>
           </div>
         ))}
-        {topics.length === 0 && <div className="apple-card p-6 text-muted">Карточек пока нет.</div>}
+        {topics.length === 0 && <div className="apple-card p-6 text-muted">Тем пока нет.</div>}
       </div>
     </AdminLayout>
   );

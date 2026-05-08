@@ -26,7 +26,7 @@ export default async function EditTopicPage({ params }: { params: { id: string }
       <CinemaBackground />
       <div className="mb-6 flex flex-col justify-between gap-4 md:flex-row md:items-end">
         <div>
-          <h1 className="text-4xl font-extrabold tracking-[-0.04em] text-foreground">Редактирование карточки</h1>
+          <h1 className="text-4xl font-extrabold tracking-[-0.04em] text-foreground">Редактирование темы</h1>
           <p className="mt-2 text-muted">{topic.title}</p>
         </div>
         <Link href={`/admin/topics/${topic.id}/questions/new`} className="btn btn-primary">

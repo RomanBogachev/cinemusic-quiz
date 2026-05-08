@@ -19,7 +19,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
             </Link>
             <Link className="btn btn-ghost" href="/admin/topics">
               <Library size={17} />
-              Карточки
+              Темы
             </Link>
             <form action="/api/admin/logout" method="post">
               <button className="btn btn-ghost" type="submit">

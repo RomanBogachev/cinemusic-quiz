@@ -14,7 +14,7 @@ export default async function NewTopicPage() {
   return (
     <AdminLayout>
       <CinemaBackground />
-      <h1 className="mb-6 text-4xl font-extrabold tracking-[-0.04em] text-foreground">Новая карточка</h1>
+      <h1 className="mb-6 text-4xl font-extrabold tracking-[-0.04em] text-foreground">Новая тема</h1>
       <TopicForm quizTypes={quizTypes} />
     </AdminLayout>
   );

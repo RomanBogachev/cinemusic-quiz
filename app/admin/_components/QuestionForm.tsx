@@ -65,7 +65,7 @@ export function QuestionForm({ topics, question, initialTopicId }: QuestionFormP
     <form onSubmit={submit} className={`apple-card p-6 ${mediaType === "audio" ? "max-w-5xl" : "max-w-3xl"}`}>
       <div className="grid gap-5">
         <label>
-          <span className="mb-2 block text-sm font-semibold text-muted">Карточка</span>
+          <span className="mb-2 block text-sm font-semibold text-muted">Тема</span>
           <select className="input" value={topicCardId} onChange={(event) => setTopicCardId(event.target.value)}>
             {topics.map((topic) => (
               <option key={topic.id} value={topic.id}>
