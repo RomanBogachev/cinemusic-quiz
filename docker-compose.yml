@@ -1,0 +1,19 @@
+services:
+  quiz:
+    build: .
+    container_name: quiz-for-friends
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: file:/app/data/quiz.db
+      UPLOAD_DIR: /app/uploads
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-change-me}
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+    volumes:
+      - quiz_db:/app/data
+      - quiz_uploads:/app/uploads
+    restart: unless-stopped
+
+volumes:
+  quiz_uploads:
+  quiz_db:

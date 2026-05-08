@@ -1,0 +1,56 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model QuizType {
+  id        String      @id @default(cuid())
+  name      String
+  slug      String      @unique
+  type      String      @unique
+  topics    TopicCard[]
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+}
+
+model TopicCard {
+  id          String     @id @default(cuid())
+  title       String
+  description String
+  coverImage  String?
+  quizTypeId  String
+  quizType    QuizType   @relation(fields: [quizTypeId], references: [id], onDelete: Cascade)
+  questions   Question[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([quizTypeId])
+}
+
+model Question {
+  id            String    @id @default(cuid())
+  topicCardId   String
+  topicCard     TopicCard @relation(fields: [topicCardId], references: [id], onDelete: Cascade)
+  title         String?
+  answer        String
+  mediaType     String
+  mediaFilePath String
+  sortOrder     Int       @default(0)
+  audioStart    Float?
+  audioEnd      Float?
+  audioOnePath  String?
+  audioThreePath String?
+  audioFivePath String?
+  audioTenPath  String?
+  videoStart    Float?
+  videoEnd      Float?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([topicCardId])
+  @@index([sortOrder])
+}
