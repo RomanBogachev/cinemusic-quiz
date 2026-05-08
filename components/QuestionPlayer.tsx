@@ -138,7 +138,12 @@ export function QuestionPlayer({ topicTitle, questions }: { topicTitle: string; 
         )}
 
         <div
-          className={`pointer-events-none absolute inset-0 z-20 bg-gradient-to-t from-black/55 via-transparent to-black/35 transition-opacity duration-300 ${
+          className={`pointer-events-none absolute inset-0 z-20 bg-gradient-to-b from-black/42 via-transparent to-black/70 transition-opacity duration-300 ${
+            controlsVisible || answerShown ? "opacity-100" : "opacity-0"
+          }`}
+        />
+        <div
+          className={`media-controls-scrim pointer-events-none absolute inset-x-0 bottom-0 z-20 h-44 transition-opacity duration-300 ${
             controlsVisible || answerShown ? "opacity-100" : "opacity-0"
           }`}
         />
@@ -151,7 +156,7 @@ export function QuestionPlayer({ topicTitle, questions }: { topicTitle: string; 
           <button
             type="button"
             onClick={() => void toggleFullscreen()}
-            className="btn border-black/10 bg-white/88 text-foreground shadow-[0_10px_30px_rgba(0,0,0,0.24)] backdrop-blur-2xl hover:bg-white"
+            className="media-control-button"
           >
             {fullscreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
             {fullscreen ? "Выйти из полного" : "На весь экран"}
@@ -164,17 +169,17 @@ export function QuestionPlayer({ topicTitle, questions }: { topicTitle: string; 
           }`}
           style={{ bottom: question.mediaType === "audio" ? "1rem" : undefined }}
         >
-          <div className="flex flex-wrap items-center justify-center gap-3 rounded-full border border-black/10 bg-white/58 p-2 shadow-[0_18px_60px_rgba(0,0,0,0.28)] backdrop-blur-2xl">
+          <div className="media-controls-panel flex flex-wrap items-center justify-center gap-2 p-2 md:gap-3">
             <button
               type="button"
               onClick={() => move(index - 1)}
               disabled={index === 0}
-              className="btn border-black/10 bg-white/84 text-foreground shadow-[0_8px_24px_rgba(0,0,0,0.16)] backdrop-blur-xl hover:bg-white disabled:cursor-not-allowed disabled:opacity-35"
+              className="media-control-button"
             >
               <ArrowLeft size={18} />
               Назад
             </button>
-            <button type="button" className="btn btn-primary shadow-glow" onClick={() => setAnswerShown((value) => !value)}>
+            <button type="button" className="media-control-button media-control-button-primary" onClick={() => setAnswerShown((value) => !value)}>
               {answerShown ? <EyeOff size={18} /> : <Eye size={18} />}
               {answerShown ? "Скрыть ответ" : "Показать ответ"}
             </button>
@@ -182,7 +187,7 @@ export function QuestionPlayer({ topicTitle, questions }: { topicTitle: string; 
               type="button"
               onClick={() => move(index + 1)}
               disabled={index === items.length - 1}
-              className="btn border-black/10 bg-white/84 text-foreground shadow-[0_8px_24px_rgba(0,0,0,0.16)] backdrop-blur-xl hover:bg-white disabled:cursor-not-allowed disabled:opacity-35"
+              className="media-control-button"
             >
               Следующий вопрос
               <ArrowRight size={18} />

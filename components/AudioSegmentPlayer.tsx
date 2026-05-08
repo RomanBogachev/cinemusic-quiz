@@ -68,14 +68,14 @@ export function AudioSegmentPlayer({ src, start, segments }: AudioSegmentPlayerP
           />
         ))}
       </div>
-      <div className="flex flex-wrap justify-center gap-3">
+      <div className="media-controls-panel mx-auto flex max-w-fit flex-wrap justify-center gap-2 p-2 md:gap-3">
         {durations.map((duration) => (
-          <button key={duration} type="button" onClick={() => void playSegment(duration)} className="btn btn-primary">
+          <button key={duration} type="button" onClick={() => void playSegment(duration)} className="media-control-button media-control-button-primary">
             {playing === duration ? <Pause size={18} /> : <Play size={18} />}
             Играть {duration} сек
           </button>
         ))}
-        <button type="button" onClick={stop} className="btn btn-ghost">
+        <button type="button" onClick={stop} className="media-control-button">
           <Square size={18} />
           Стоп
         </button>

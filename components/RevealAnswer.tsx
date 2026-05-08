@@ -13,7 +13,7 @@ export function RevealAnswer({ answer, resetKey }: { answer: string; resetKey: s
 
   return (
     <div className="w-full">
-      <button type="button" className="btn btn-primary w-full sm:w-auto" onClick={() => setShown((value) => !value)}>
+      <button type="button" className="media-control-button media-control-button-primary w-full sm:w-auto" onClick={() => setShown((value) => !value)}>
         {shown ? <EyeOff size={18} /> : <Eye size={18} />}
         {shown ? "Скрыть ответ" : "Показать ответ"}
       </button>

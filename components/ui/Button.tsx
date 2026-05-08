@@ -2,7 +2,7 @@ import { Loader2 } from "lucide-react";
 import type { ButtonHTMLAttributes } from "react";
 
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
-  variant?: "primary" | "secondary" | "ghost" | "danger";
+  variant?: "primary" | "secondary" | "ghost" | "danger" | "media" | "mediaPrimary";
   size?: "sm" | "md" | "lg";
   loading?: boolean;
 };
@@ -11,7 +11,9 @@ const variants = {
   primary: "bg-primary text-white border-primary/20 hover:bg-[#006DE5]",
   secondary: "bg-black/[0.05] text-foreground border-black/[0.06] hover:bg-black/[0.08]",
   ghost: "bg-transparent text-primary border-transparent hover:bg-primary/10",
-  danger: "bg-danger/10 text-danger border-danger/10 hover:bg-danger/15"
+  danger: "bg-danger/10 text-danger border-danger/10 hover:bg-danger/15",
+  media: "media-control-button",
+  mediaPrimary: "media-control-button media-control-button-primary"
 };
 
 const sizes = {

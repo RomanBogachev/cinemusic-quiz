@@ -125,3 +125,80 @@ textarea {
   outline: none;
   box-shadow: 0 0 0 4px rgba(0, 122, 255, 0.12);
 }
+
+.media-control-button {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(15, 15, 18, 0.72);
+  padding: 0.72rem 1rem;
+  color: #fff;
+  font-weight: 700;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+  box-shadow:
+    0 8px 30px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(16px) saturate(140%);
+  transition: transform 180ms ease, border-color 180ms ease, background 180ms ease, box-shadow 180ms ease, opacity 180ms ease;
+}
+
+.media-control-button:hover {
+  transform: translateY(-1px);
+  border-color: rgba(255, 255, 255, 0.34);
+  background: rgba(25, 25, 30, 0.86);
+}
+
+.media-control-button:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.media-control-button:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 3px rgba(255, 255, 255, 0.25),
+    0 0 0 6px rgba(0, 122, 255, 0.28),
+    0 8px 30px rgba(0, 0, 0, 0.35);
+}
+
+.media-control-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
+}
+
+.media-control-button-primary {
+  border-color: rgba(90, 163, 255, 0.48);
+  background: rgba(0, 96, 210, 0.86);
+  box-shadow:
+    0 10px 34px rgba(0, 65, 180, 0.34),
+    0 8px 30px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.20);
+}
+
+.media-control-button-primary:hover {
+  border-color: rgba(135, 190, 255, 0.66);
+  background: rgba(0, 122, 255, 0.92);
+}
+
+.media-control-button-danger {
+  border-color: rgba(255, 90, 82, 0.42);
+}
+
+.media-controls-panel {
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(10, 10, 12, 0.52);
+  box-shadow:
+    0 18px 60px rgba(0, 0, 0, 0.38),
+    inset 0 1px 0 rgba(255, 255, 255, 0.10);
+  backdrop-filter: blur(18px) saturate(145%);
+}
+
+.media-controls-scrim {
+  background:
+    radial-gradient(circle at 50% 100%, rgba(0, 0, 0, 0.72), rgba(0, 0, 0, 0.24) 45%, rgba(0, 0, 0, 0) 72%),
+    linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.58) 100%);
+}

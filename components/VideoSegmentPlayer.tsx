@@ -56,19 +56,21 @@ export function VideoSegmentPlayer({ src, start, end }: VideoSegmentPlayerProps)
   return (
     <div className="rounded-[28px] border border-amber-200/14 bg-black/60 p-3 shadow-panel">
       <video ref={videoRef} src={src} preload="metadata" playsInline className="mx-auto max-h-[70vh] w-full rounded-[20px] object-contain" />
-      <div className="flex flex-wrap justify-center gap-3 p-4">
-        <button type="button" onClick={() => void playSegment()} className="btn btn-primary">
+      <div className="flex justify-center p-4">
+        <div className="media-controls-panel flex flex-wrap justify-center gap-2 p-2 md:gap-3">
+        <button type="button" onClick={() => void playSegment()} className="media-control-button media-control-button-primary">
           <Play size={18} />
           Играть фрагмент
         </button>
-        <button type="button" onClick={stop} className="btn btn-ghost">
+        <button type="button" onClick={stop} className="media-control-button">
           <Square size={18} />
           Стоп
         </button>
-        <button type="button" onClick={() => void openFullscreen()} className="btn btn-ghost">
+        <button type="button" onClick={() => void openFullscreen()} className="media-control-button">
           <Maximize2 size={18} />
           На весь экран
         </button>
+        </div>
       </div>
       <div className="pb-4 text-center text-sm text-white/55">
         Фрагмент: {start}–{end} сек. {playing ? "Идет воспроизведение." : "Ожидает запуска."}
