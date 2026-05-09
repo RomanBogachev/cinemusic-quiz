@@ -79,11 +79,11 @@ export function QuestionPlayer({ topicTitle, questions }: { topicTitle: string; 
     return () => document.removeEventListener("fullscreenchange", syncFullscreen);
   }, []);
 
-  function move(nextIndex: number) {
+  const move = useCallback((nextIndex: number) => {
     setAnswerShown(false);
     setIndex(Math.max(0, Math.min(items.length - 1, nextIndex)));
     mainRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-  }
+  }, [items.length]);
 
   async function toggleFullscreen() {
     if (document.fullscreenElement) {
@@ -92,6 +92,36 @@ export function QuestionPlayer({ topicTitle, questions }: { topicTitle: string; 
     }
     await mediaShellRef.current?.requestFullscreen?.();
   }
+
+  useEffect(() => {
+    function isEditableTarget(target: EventTarget | null) {
+      if (!(target instanceof HTMLElement)) return false;
+      return Boolean(target.closest("input, textarea, select, button, [contenteditable='true']"));
+    }
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (isEditableTarget(event.target)) return;
+
+      if (event.key === "ArrowRight") {
+        event.preventDefault();
+        revealControls();
+        move(index + 1);
+      }
+      if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        revealControls();
+        move(index - 1);
+      }
+      if (event.code === "Space") {
+        event.preventDefault();
+        revealControls();
+        setAnswerShown((value) => !value);
+      }
+    }
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [index, move, revealControls]);
 
   if (!question) {
     return (

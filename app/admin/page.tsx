@@ -1,5 +1,3 @@
-import Link from "next/link";
-import { Plus, Rows3 } from "lucide-react";
 import { AdminLayout } from "@/components/AdminLayout";
 import { AdminLoginForm } from "@/app/admin/_components/AdminLoginForm";
 import { LatestQuestionsTable } from "@/app/admin/_components/LatestQuestionsTable";
@@ -34,16 +32,6 @@ export default async function AdminPage() {
           <div className="mt-2 text-6xl font-extrabold tracking-[-0.04em] text-foreground">{questions}</div>
         </div>
       </section>
-      <div className="mt-6 flex flex-wrap gap-3">
-        <Link href="/admin/topics/new" className="btn btn-primary">
-          <Plus size={18} />
-          Создать тему
-        </Link>
-        <Link href="/admin/topics" className="btn btn-ghost">
-          <Rows3 size={18} />
-          Управлять темами
-        </Link>
-      </div>
       <LatestQuestionsTable />
     </AdminLayout>
   );

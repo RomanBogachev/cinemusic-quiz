@@ -91,7 +91,7 @@ export function MediaUploadField({ kind, value, onChange }: MediaUploadFieldProp
   }
 
   return (
-    <div>
+    <div className="min-w-0">
       {kind === "cover" && (localPreview || value) && (
         <div className="mb-3 overflow-hidden rounded-3xl border border-black/[0.06] bg-black/[0.04] shadow-soft">
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -100,7 +100,7 @@ export function MediaUploadField({ kind, value, onChange }: MediaUploadFieldProp
       )}
       <button
         type="button"
-        className="flex w-full flex-col items-center justify-center rounded-3xl border border-dashed border-black/[0.12] bg-white/70 p-7 text-center transition hover:border-primary/35 hover:bg-white"
+        className="flex w-full min-w-0 flex-col items-center justify-center overflow-hidden rounded-3xl border border-dashed border-black/[0.12] bg-white/70 p-5 text-center transition hover:border-primary/35 hover:bg-white md:p-7"
         onClick={() => inputRef.current?.click()}
         onDragOver={(event) => event.preventDefault()}
         onDrop={(event) => {
@@ -113,7 +113,7 @@ export function MediaUploadField({ kind, value, onChange }: MediaUploadFieldProp
         <span className="font-semibold text-foreground">
           {loading ? "Загружаю..." : kind === "cover" && value ? "Изменить обложку или перетащить сюда" : "Загрузить файл или перетащить сюда"}
         </span>
-        {value && <span className="mt-2 max-w-full truncate text-sm text-muted">{value}</span>}
+        {value && <span className="mt-2 max-w-full break-all text-sm leading-5 text-muted">{value}</span>}
       </button>
       {kind === "cover" && value && (
         <button

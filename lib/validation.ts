@@ -40,6 +40,9 @@ function refineQuestionTiming(value: Partial<z.infer<typeof questionBaseSchema>>
     if (value.videoStart != null && value.videoEnd != null && value.videoEnd <= value.videoStart) {
       ctx.addIssue({ code: "custom", path: ["videoEnd"], message: "Конец должен быть больше старта" });
     }
+    if (value.videoStart != null && value.videoEnd != null && value.videoEnd - value.videoStart < 0.5) {
+      ctx.addIssue({ code: "custom", path: ["videoEnd"], message: "Фрагмент должен длиться не меньше 0.5 сек" });
+    }
   }
 }
 

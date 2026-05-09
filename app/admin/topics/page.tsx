@@ -5,6 +5,7 @@ import { CinemaBackground } from "@/components/CinemaBackground";
 import { DeleteButton } from "@/app/admin/_components/DeleteButton";
 import { isAdminAuthenticated } from "@/lib/auth";
 import { ensureCategories } from "@/lib/ensureCategories";
+import { getCategoryDisplayName } from "@/lib/categories";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 
@@ -33,7 +34,7 @@ export default async function AdminTopicsPage() {
         {topics.map((topic) => (
           <div key={topic.id} className="apple-card flex flex-col justify-between gap-4 p-5 md:flex-row md:items-center">
             <div>
-              <div className="text-xs font-bold uppercase tracking-[0.18em] text-primary/70">{topic.quizType.name}</div>
+              <div className="text-xs font-bold uppercase tracking-[0.18em] text-primary/70">{getCategoryDisplayName(topic.quizType.type)}</div>
               <Link href={`/admin/topics/${topic.id}`} className="mt-1 block text-2xl font-bold tracking-[-0.03em] text-foreground hover:text-primary">
                 {topic.title}
               </Link>

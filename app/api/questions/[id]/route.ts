@@ -3,6 +3,8 @@ import { requireAdmin } from "@/lib/auth";
 import { getMediaTypeFromQuizType } from "@/lib/mediaTypes";
 import { prisma } from "@/lib/prisma";
 import { questionUpdateSchema } from "@/lib/validation";
+import { removePublicUpload } from "@/lib/files";
+import { trimVideoSegment } from "@/lib/videoProcessing";
 
 export const dynamic = "force-dynamic";
 
@@ -49,13 +51,56 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Некорректные данные" }, { status: 400 });
   }
 
-  const question = await prisma.question.update({ where: { id: params.id }, data: parsed.data });
-  return NextResponse.json(question);
+  let data = parsed.data;
+  let trimmedVideo: Awaited<ReturnType<typeof trimVideoSegment>> | null = null;
+  const nextMediaType = data.mediaType ?? existingQuestion.mediaType;
+  const nextMediaFilePath = data.mediaFilePath ?? existingQuestion.mediaFilePath;
+  const nextVideoStart = data.videoStart ?? existingQuestion.videoStart ?? 0;
+  const nextVideoEnd = data.videoEnd ?? existingQuestion.videoEnd ?? 0;
+  const videoRangeChanged =
+    nextVideoStart !== (existingQuestion.videoStart ?? 0) ||
+    nextVideoEnd !== (existingQuestion.videoEnd ?? 0);
+  const videoFileChanged = nextMediaFilePath !== existingQuestion.mediaFilePath;
+  const shouldTrimVideo = nextMediaType === "video" && (videoFileChanged || videoRangeChanged);
+
+  try {
+    if (shouldTrimVideo) {
+      trimmedVideo = await trimVideoSegment({
+        mediaFilePath: nextMediaFilePath,
+        start: nextVideoStart,
+        end: nextVideoEnd
+      });
+      data = {
+        ...data,
+        mediaFilePath: trimmedVideo.outputPublicPath,
+        videoStart: 0,
+        videoEnd: trimmedVideo.duration
+      };
+    }
+
+    const question = await prisma.question.update({ where: { id: params.id }, data });
+    if (trimmedVideo) {
+      await removePublicUpload(trimmedVideo.inputPublicPath);
+      if (existingQuestion.mediaFilePath !== trimmedVideo.inputPublicPath) {
+        await removePublicUpload(existingQuestion.mediaFilePath);
+      }
+    }
+    return NextResponse.json(question);
+  } catch (error) {
+    if (trimmedVideo) {
+      await removePublicUpload(trimmedVideo.outputPublicPath);
+    }
+    const message = error instanceof Error ? error.message : "Не удалось сохранить вопрос";
+    return NextResponse.json({ error: message }, { status: 400 });
+  }
 }
 
 export async function DELETE(_request: NextRequest, { params }: { params: { id: string } }) {
   const authError = requireAdmin();
   if (authError) return authError;
-  await prisma.question.delete({ where: { id: params.id } });
+  const question = await prisma.question.delete({ where: { id: params.id } });
+  if (question.mediaType === "video") {
+    await removePublicUpload(question.mediaFilePath);
+  }
   return NextResponse.json({ ok: true });
 }

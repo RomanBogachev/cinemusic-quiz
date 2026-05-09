@@ -3,6 +3,8 @@ import { requireAdmin } from "@/lib/auth";
 import { getMediaTypeFromQuizType } from "@/lib/mediaTypes";
 import { prisma } from "@/lib/prisma";
 import { questionSchema } from "@/lib/validation";
+import { removePublicUpload } from "@/lib/files";
+import { trimVideoSegment } from "@/lib/videoProcessing";
 
 export const dynamic = "force-dynamic";
 
@@ -60,6 +62,34 @@ export async function POST(request: NextRequest) {
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Некорректные данные" }, { status: 400 });
   }
-  const question = await prisma.question.create({ data: parsed.data });
-  return NextResponse.json(question, { status: 201 });
+  let data = parsed.data;
+  let trimmedVideo: Awaited<ReturnType<typeof trimVideoSegment>> | null = null;
+
+  try {
+    if (data.mediaType === "video") {
+      trimmedVideo = await trimVideoSegment({
+        mediaFilePath: data.mediaFilePath,
+        start: data.videoStart ?? 0,
+        end: data.videoEnd ?? 0
+      });
+      data = {
+        ...data,
+        mediaFilePath: trimmedVideo.outputPublicPath,
+        videoStart: 0,
+        videoEnd: trimmedVideo.duration
+      };
+    }
+
+    const question = await prisma.question.create({ data });
+    if (trimmedVideo) {
+      await removePublicUpload(trimmedVideo.inputPublicPath);
+    }
+    return NextResponse.json(question, { status: 201 });
+  } catch (error) {
+    if (trimmedVideo) {
+      await removePublicUpload(trimmedVideo.outputPublicPath);
+    }
+    const message = error instanceof Error ? error.message : "Не удалось сохранить вопрос";
+    return NextResponse.json({ error: message }, { status: 400 });
+  }
 }

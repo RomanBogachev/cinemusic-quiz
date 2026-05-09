@@ -24,7 +24,7 @@ export default async function CategoryPage({ params }: { params: { type: string 
           ← На главную
         </Link>
         <header className="mb-10 mt-8">
-          <h1 className="text-5xl font-extrabold leading-none tracking-[-0.04em] text-foreground md:text-7xl">{meta.name}</h1>
+          <h1 className="text-5xl font-extrabold leading-none tracking-[-0.04em] text-foreground md:text-7xl">{meta.displayName}</h1>
           <p className="mt-5 max-w-2xl text-lg leading-8 text-muted">{meta.description}</p>
         </header>
         {topics.length === 0 ? (

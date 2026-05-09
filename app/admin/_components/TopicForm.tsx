@@ -5,6 +5,7 @@ import { Save } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { MediaUploadField } from "@/components/MediaUploadField";
+import { getCategoryDisplayName } from "@/lib/categories";
 
 type TopicFormProps = {
   quizTypes: QuizType[];
@@ -56,7 +57,7 @@ export function TopicForm({ quizTypes, topic }: TopicFormProps) {
             <select className="input" value={quizTypeId} onChange={(event) => setQuizTypeId(event.target.value)}>
               {quizTypes.map((item) => (
                 <option key={item.id} value={item.id}>
-                  {item.name}
+                  {getCategoryDisplayName(item.type)}
                 </option>
               ))}
             </select>

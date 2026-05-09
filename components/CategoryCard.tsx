@@ -32,7 +32,7 @@ export function CategoryCard({ category, index }: { category: CategoryMeta; inde
           </div>
           <div>
             <h2 className="max-w-[11ch] text-4xl font-extrabold leading-[0.95] tracking-[-0.04em] text-foreground md:text-5xl">
-              {category.name}
+              {category.displayName}
             </h2>
             <p className="mt-5 max-w-md text-base leading-7 text-muted">{category.description}</p>
           </div>

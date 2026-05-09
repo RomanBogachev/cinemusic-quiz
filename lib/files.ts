@@ -1,5 +1,5 @@
 import path from "path";
-import { mkdir } from "fs/promises";
+import { mkdir, rm } from "fs/promises";
 
 export type UploadKind = "image" | "audio" | "video" | "cover";
 
@@ -31,8 +31,40 @@ export async function ensureUploadDir(kind: UploadKind) {
   return dir;
 }
 
+export async function ensureNestedUploadDir(kind: UploadKind, subfolder: string) {
+  const safeSubfolder = subfolder.split(/[\\/]/).filter((part) => part && part !== "." && part !== "..").join(path.sep);
+  const dir = path.join(await ensureUploadDir(kind), safeSubfolder);
+  await mkdir(dir, { recursive: true });
+  return dir;
+}
+
 export function publicUploadPath(kind: UploadKind, fileName: string) {
   return `/uploads/${uploadFolders[kind]}/${fileName}`;
+}
+
+export function publicNestedUploadPath(kind: UploadKind, subfolder: string, fileName: string) {
+  const safeSubfolder = subfolder.split(/[\\/]/).filter((part) => part && part !== "." && part !== "..").join("/");
+  return `/uploads/${uploadFolders[kind]}/${safeSubfolder}/${fileName}`;
+}
+
+export function localPathFromPublicUpload(publicPath: string) {
+  if (!publicPath.startsWith("/uploads/")) {
+    throw new Error("Файл должен находиться в uploads");
+  }
+  const parts = publicPath.replace(/^\/uploads\//, "").split("/").filter(Boolean);
+  if (parts.length < 2 || parts.some((part) => part === "." || part === ".." || path.isAbsolute(part))) {
+    throw new Error("Некорректный путь файла");
+  }
+  return path.join(uploadRoot(), ...parts);
+}
+
+export async function removePublicUpload(publicPath?: string | null) {
+  if (!publicPath) return;
+  try {
+    await rm(localPathFromPublicUpload(publicPath), { force: true });
+  } catch {
+    // File cleanup is best-effort: data consistency is more important than failing the request.
+  }
 }
 
 export function resolveUploadPublicPath(publicPath: string[]) {

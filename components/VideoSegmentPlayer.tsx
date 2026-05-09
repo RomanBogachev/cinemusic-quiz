@@ -9,42 +9,94 @@ type VideoSegmentPlayerProps = {
   end: number;
 };
 
+function waitForSeek(video: HTMLVideoElement, seconds: number) {
+  return new Promise<void>((resolve) => {
+    const target = Math.max(0, seconds);
+    if (Math.abs(video.currentTime - target) < 0.03 && video.readyState >= 2) {
+      resolve();
+      return;
+    }
+
+    let settled = false;
+    const timeout = window.setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      video.removeEventListener("seeked", onSeeked);
+      resolve();
+    }, 800);
+    const onSeeked = () => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(timeout);
+      resolve();
+    };
+
+    video.addEventListener("seeked", onSeeked, { once: true });
+    video.currentTime = target;
+  });
+}
+
 export function VideoSegmentPlayer({ src, start, end }: VideoSegmentPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const rafRef = useRef<number | null>(null);
+  const intervalRef = useRef<number | null>(null);
   const [playing, setPlaying] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const stop = useCallback(() => {
+  const clearRaf = useCallback(() => {
     if (rafRef.current) {
       cancelAnimationFrame(rafRef.current);
       rafRef.current = null;
     }
+    if (intervalRef.current) {
+      window.clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+  }, []);
+
+  const stop = useCallback(() => {
+    clearRaf();
     const video = videoRef.current;
     if (video) {
       video.pause();
       video.currentTime = start;
     }
     setPlaying(false);
-  }, [start]);
+  }, [clearRaf, start]);
 
-  function watchEnd() {
+  const watchEnd = useCallback(() => {
     const video = videoRef.current;
     if (!video) return;
     if (video.currentTime >= end) {
-      stop();
+      video.pause();
+      video.currentTime = end;
+      setPlaying(false);
+      clearRaf();
+      return;
+    }
+    if (video.paused || video.ended) {
+      setPlaying(false);
+      clearRaf();
       return;
     }
     rafRef.current = requestAnimationFrame(watchEnd);
-  }
+  }, [clearRaf, end]);
 
   async function playSegment() {
     const video = videoRef.current;
     if (!video) return;
     stop();
-    video.currentTime = start;
     setPlaying(true);
-    await video.play();
-    rafRef.current = requestAnimationFrame(watchEnd);
+    setError(null);
+    try {
+      await waitForSeek(video, start);
+      await video.play();
+      rafRef.current = requestAnimationFrame(watchEnd);
+      intervalRef.current = window.setInterval(watchEnd, 80);
+    } catch {
+      setPlaying(false);
+      setError("Не удалось запустить видео. Попробуйте ещё раз.");
+    }
   }
 
   async function openFullscreen() {
@@ -52,6 +104,7 @@ export function VideoSegmentPlayer({ src, start, end }: VideoSegmentPlayerProps)
   }
 
   useEffect(() => stop, [src, start, end, stop]);
+  useEffect(() => clearRaf, [clearRaf]);
 
   return (
     <div className="rounded-[28px] border border-amber-200/14 bg-black/60 p-3 shadow-panel">
@@ -75,6 +128,7 @@ export function VideoSegmentPlayer({ src, start, end }: VideoSegmentPlayerProps)
       <div className="pb-4 text-center text-sm text-white/55">
         Фрагмент: {start}–{end} сек. {playing ? "Идет воспроизведение." : "Ожидает запуска."}
       </div>
+      {error && <div className="pb-4 text-center text-sm text-danger">{error}</div>}
     </div>
   );
 }

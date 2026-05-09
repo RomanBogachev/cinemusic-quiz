@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { Clapperboard, Home, Library, LogOut } from "lucide-react";
+import { Clapperboard } from "lucide-react";
+import { AdminNav } from "@/app/admin/_components/AdminNav";
 
 export function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -12,22 +13,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
             </span>
             Админка квиза
           </Link>
-          <nav className="flex flex-wrap gap-2">
-            <Link className="btn btn-ghost" href="/">
-              <Home size={17} />
-              Сайт
-            </Link>
-            <Link className="btn btn-ghost" href="/admin/topics">
-              <Library size={17} />
-              Темы
-            </Link>
-            <form action="/api/admin/logout" method="post">
-              <button className="btn btn-ghost" type="submit">
-                <LogOut size={17} />
-                Выйти
-              </button>
-            </form>
-          </nav>
+          <AdminNav />
         </header>
         {children}
       </div>
