@@ -57,13 +57,13 @@ export function AudioSegmentPlayer({ src, start, segments }: AudioSegmentPlayerP
   useEffect(() => stop, [src, start, stop]);
 
   return (
-    <div className="rounded-[28px] border border-white/10 bg-black/70 p-7 pb-32 shadow-panel">
+    <div className="min-h-[58vh] rounded-[26px] border border-amber-100/10 bg-[radial-gradient(ellipse_at_center,rgba(255,207,118,0.12),rgba(16,9,18,0.72)_48%,rgba(0,0,0,0.92)_100%)] p-5 pb-32 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] md:min-h-[62vh] md:p-7 md:pb-32">
       <audio ref={audioRef} src={src} preload="auto" onEnded={() => setPlaying(null)} />
-      <div className="mb-7 flex h-36 items-end justify-center gap-3 rounded-3xl bg-gradient-to-br from-primary/10 to-black p-8">
+      <div className="mx-auto mb-7 flex h-52 max-w-4xl items-end justify-center gap-2 rounded-[32px] border border-amber-100/15 bg-[linear-gradient(135deg,rgba(255,215,136,0.10),rgba(89,132,210,0.08)_45%,rgba(0,0,0,0.62))] p-8 shadow-[0_24px_80px_rgba(0,0,0,0.42),inset_0_1px_0_rgba(255,255,255,0.08)] md:gap-3">
         {Array.from({ length: 18 }).map((_, index) => (
           <span
             key={index}
-            className={`w-2 rounded-full bg-primary/80 ${playing ? "animate-pulse" : ""}`}
+            className={`w-2 rounded-full bg-gradient-to-t from-amber-500 to-amber-100 shadow-[0_0_18px_rgba(255,200,100,0.45)] ${playing ? "animate-pulse" : ""}`}
             style={{ height: `${28 + ((index * 19) % 72)}%`, animationDelay: `${index * 55}ms` }}
           />
         ))}

@@ -25,10 +25,10 @@ export default async function TopicPage({ params }: { params: { id: string } }) 
     .map((question) => ({ ...question, mediaType: question.mediaType as QuestionMediaType }));
 
   return (
-    <main className="min-h-screen px-5 py-8 md:px-10">
-      <CinemaBackground />
-      <div className="mx-auto max-w-7xl">
-        <Link href={`/category/${topic.quizType.type}`} className="text-sm font-semibold uppercase tracking-[0.18em] text-primary hover:text-primary/75">
+    <main className="relative min-h-screen overflow-hidden px-4 py-6 text-white md:px-10 md:py-8">
+      <CinemaBackground variant="theater" />
+      <div className="relative z-10 mx-auto max-w-7xl">
+        <Link href={`/category/${topic.quizType.type}`} className="text-sm font-semibold uppercase tracking-[0.18em] text-amber-100/70 transition hover:text-amber-100">
           ← К темам
         </Link>
         <div className="mt-7">
