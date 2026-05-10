@@ -63,7 +63,7 @@ textarea {
   border-radius: 14px;
   border: 1px solid rgba(0, 0, 0, 0.08);
   background: rgba(255, 255, 255, 0.9);
-  padding: 0.8rem 0.95rem;
+  padding: 0.62rem 0.8rem;
   color: #1d1d1f;
   outline: none;
 }
@@ -80,7 +80,7 @@ textarea {
   gap: 0.5rem;
   border-radius: 999px;
   border: 1px solid rgba(0, 0, 0, 0.06);
-  padding: 0.72rem 1rem;
+  padding: 0.58rem 0.9rem;
   color: #1d1d1f;
   transition: transform 180ms ease, border-color 180ms ease, background 180ms ease, box-shadow 180ms ease;
 }

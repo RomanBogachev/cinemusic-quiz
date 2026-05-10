@@ -7,7 +7,7 @@ import { useEffect, useMemo, useState } from "react";
 import { AudioWaveformEditor } from "@/components/AudioWaveformEditor";
 import { MediaUploadField } from "@/components/MediaUploadField";
 import { VideoTrimmer } from "@/components/admin/video/VideoTrimmer";
-import { getCategoryDisplayName } from "@/lib/categories";
+import { getCategoryBadgeClassName, getCategoryCardClassName, getCategoryDisplayName } from "@/lib/categories";
 import { getMediaTypeDescription, getMediaTypeFromQuizType, MEDIA_TYPE_LABELS } from "@/lib/mediaTypes";
 import type { QuestionMediaType } from "@/lib/types";
 
@@ -25,13 +25,13 @@ export function QuestionForm({ topics, question, initialTopicId }: QuestionFormP
   const selectedTopic = useMemo(() => topics.find((topic) => topic.id === topicCardId), [topics, topicCardId]);
   const expectedMediaType = selectedTopic ? getMediaTypeFromQuizType(selectedTopic.quizType.type) : "image";
   const [mediaType, setMediaType] = useState<QuestionMediaType>((question?.mediaType as QuestionMediaType | undefined) ?? expectedMediaType);
-  const [title, setTitle] = useState(question?.title ?? "");
+  const [title] = useState(question?.title ?? "");
   const [answer, setAnswer] = useState(question?.answer ?? "");
   const [mediaFilePath, setMediaFilePath] = useState(question?.mediaFilePath ?? "");
   const [audioStart, setAudioStart] = useState(question?.audioStart?.toString() ?? "0");
   const [videoStart, setVideoStart] = useState(question?.videoStart?.toString() ?? "0");
   const [videoEnd, setVideoEnd] = useState(question?.videoEnd?.toString() ?? "10");
-  const [sortOrder, setSortOrder] = useState(question?.sortOrder?.toString() ?? "0");
+  const [sortOrder] = useState(question?.sortOrder?.toString() ?? "0");
   const [videoReady, setVideoReady] = useState(mediaType !== "video" || !mediaFilePath);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -83,14 +83,14 @@ export function QuestionForm({ topics, question, initialTopicId }: QuestionFormP
   }
 
   return (
-    <form onSubmit={submit} className="apple-card w-full min-w-0 overflow-hidden p-5 md:p-7">
-      <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(320px,420px)]">
-        <div className="grid min-w-0 content-start gap-5">
-          <div className="grid gap-5 lg:grid-cols-2">
+    <form onSubmit={submit} className="apple-card w-full min-w-0 overflow-hidden p-4 md:p-5">
+      <div className="grid min-w-0 gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(300px,400px)]">
+        <div className="grid min-w-0 content-start gap-4">
+          <div className="grid gap-4 lg:grid-cols-2">
             <label>
-              <span className="mb-2 block text-sm font-semibold text-muted">Тема</span>
+              <span className="mb-1.5 block text-xs font-semibold text-muted">Тема</span>
               <select
-                className="input"
+                className="input text-sm"
                 value={topicCardId}
                 onChange={(event) => {
                   const nextTopicId = event.target.value;
@@ -107,18 +107,18 @@ export function QuestionForm({ topics, question, initialTopicId }: QuestionFormP
               </select>
             </label>
             <div>
-              <span className="mb-2 block text-sm font-semibold text-muted">Тип медиа</span>
-              <div className="rounded-[18px] border border-black/[0.06] bg-primary/[0.06] p-4">
-                <div className="inline-flex rounded-full bg-primary/10 px-3 py-1 text-sm font-bold text-primary">
+              <span className="mb-1.5 block text-xs font-semibold text-muted">Тип медиа</span>
+              <div className={`rounded-[18px] border p-3 ${selectedTopic ? getCategoryCardClassName(selectedTopic.quizType.type) : "border-black/[0.06] bg-primary/[0.06]"}`}>
+                <div className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-bold ${selectedTopic ? getCategoryBadgeClassName(selectedTopic.quizType.type) : "border-primary/20 bg-primary/10 text-primary"}`}>
                   Тип медиа: {MEDIA_TYPE_LABELS[mediaType]}
                 </div>
                 {selectedTopic && (
-                  <p className="mt-3 text-sm leading-6 text-muted">
+                  <p className="mt-2 text-xs leading-5 text-muted">
                     {getMediaTypeDescription(getCategoryDisplayName(selectedTopic.quizType.type), expectedMediaType)}
                   </p>
                 )}
                 {mediaMismatch && (
-                  <p className="mt-2 text-sm leading-6 text-warning">
+                  <p className="mt-2 text-xs leading-5 text-warning">
                     У этого существующего вопроса тип медиа отличается от категории темы. При смене темы тип будет выбран автоматически.
                   </p>
                 )}
@@ -126,12 +126,8 @@ export function QuestionForm({ topics, question, initialTopicId }: QuestionFormP
             </div>
           </div>
           <label>
-            <span className="mb-2 block text-sm font-semibold text-muted">Заголовок вопроса</span>
-            <input className="input" value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Необязательно" />
-          </label>
-          <label>
-            <span className="mb-2 block text-sm font-semibold text-muted">Правильный ответ</span>
-            <input className="input" value={answer} onChange={(event) => setAnswer(event.target.value)} required />
+            <span className="mb-1.5 block text-xs font-semibold text-muted">Правильный ответ</span>
+            <input className="input text-sm" value={answer} onChange={(event) => setAnswer(event.target.value)} required />
           </label>
           {mediaType === "audio" && question && mediaFilePath && (
             <div className="min-w-0">
@@ -146,26 +142,26 @@ export function QuestionForm({ topics, question, initialTopicId }: QuestionFormP
           )}
         </div>
 
-        <aside className="grid min-w-0 content-start gap-5">
+        <aside className="grid min-w-0 content-start gap-4">
           <div className="min-w-0">
-            <span className="mb-2 block text-sm font-semibold text-muted">Медиафайл</span>
+            <span className="mb-1.5 block text-xs font-semibold text-muted">Медиафайл</span>
             <MediaUploadField kind={uploadKind} value={mediaFilePath} onChange={setMediaFilePath} />
           </div>
 
           {mediaType === "audio" && (
-            <div className="grid gap-4">
-              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
+            <div className="grid gap-3">
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
                 <label>
-                  <span className="mb-2 block text-sm font-semibold text-muted">Начало, сек</span>
-                  <input className="input" type="number" min="0" step="0.001" value={audioStart} onChange={(event) => setAudioStart(event.target.value)} />
+                  <span className="mb-1.5 block text-xs font-semibold text-muted">Начало, сек</span>
+                  <input className="input text-sm" type="number" min="0" step="0.001" value={audioStart} onChange={(event) => setAudioStart(event.target.value)} />
                 </label>
                 <label>
-                  <span className="mb-2 block text-sm font-semibold text-muted">Конец, сек</span>
-                  <input className="input" type="number" min="0" step="0.001" value={question?.audioEnd?.toString() ?? ""} readOnly />
+                  <span className="mb-1.5 block text-xs font-semibold text-muted">Конец, сек</span>
+                  <input className="input text-sm" type="number" min="0" step="0.001" value={question?.audioEnd?.toString() ?? ""} readOnly />
                 </label>
               </div>
               {(!question || !mediaFilePath) && (
-                <div className="rounded-3xl border border-black/[0.06] bg-black/[0.03] p-5 text-sm text-muted">
+                <div className="rounded-2xl border border-black/[0.06] bg-black/[0.03] p-4 text-xs leading-5 text-muted">
                   Сначала сохраните аудиовопрос, затем откройте его редактирование и нарежьте фрагменты во встроенном waveform-редакторе.
                 </div>
               )}
@@ -173,15 +169,10 @@ export function QuestionForm({ topics, question, initialTopicId }: QuestionFormP
           )}
 
           {mediaType === "video" && !mediaFilePath && (
-            <div className="rounded-3xl border border-black/[0.06] bg-black/[0.03] p-5 text-sm text-muted">
+            <div className="rounded-2xl border border-black/[0.06] bg-black/[0.03] p-4 text-xs leading-5 text-muted">
               Загрузите mp4-файл, чтобы открыть таймлайн и выбрать фрагмент для проигрывания в квизе.
             </div>
           )}
-
-          <label>
-            <span className="mb-2 block text-sm font-semibold text-muted">Порядок</span>
-            <input className="input" type="number" min="0" step="1" value={sortOrder} onChange={(event) => setSortOrder(event.target.value)} />
-          </label>
         </aside>
       </div>
 
@@ -200,7 +191,7 @@ export function QuestionForm({ topics, question, initialTopicId }: QuestionFormP
         </div>
       )}
       {error && <p className="mt-4 text-sm text-danger">{error}</p>}
-      <div className="mt-7 flex justify-end border-t border-black/[0.06] pt-5">
+      <div className="mt-5 flex justify-end border-t border-black/[0.06] pt-4">
         <button type="submit" className="btn btn-primary w-full sm:w-auto" disabled={loading}>
           <Save size={18} />
           {loading ? "Сохраняю..." : "Сохранить вопрос"}

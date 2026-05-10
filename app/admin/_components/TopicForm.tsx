@@ -5,7 +5,7 @@ import { Save } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { MediaUploadField } from "@/components/MediaUploadField";
-import { getCategoryDisplayName } from "@/lib/categories";
+import { getCategoryBadgeClassName, getCategoryCardClassName, getCategoryDisplayName } from "@/lib/categories";
 
 type TopicFormProps = {
   quizTypes: QuizType[];
@@ -20,6 +20,7 @@ export function TopicForm({ quizTypes, topic }: TopicFormProps) {
   const [coverImage, setCoverImage] = useState(topic?.coverImage ?? "");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const selectedQuizType = quizTypes.find((item) => item.id === quizTypeId);
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -41,20 +42,20 @@ export function TopicForm({ quizTypes, topic }: TopicFormProps) {
   }
 
   return (
-    <form onSubmit={submit} className="apple-card w-full p-5 md:p-7">
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">
-        <div className="grid content-start gap-5">
+    <form onSubmit={submit} className="apple-card w-full p-4 md:p-5">
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_380px]">
+        <div className="grid content-start gap-4">
           <label>
-            <span className="mb-2 block text-sm font-semibold text-muted">Название</span>
-            <input className="input" value={title} onChange={(event) => setTitle(event.target.value)} required />
+            <span className="mb-1.5 block text-xs font-semibold text-muted">Название</span>
+            <input className="input text-sm" value={title} onChange={(event) => setTitle(event.target.value)} required />
           </label>
           <label>
-            <span className="mb-2 block text-sm font-semibold text-muted">Описание</span>
-            <textarea className="input min-h-40" value={description} onChange={(event) => setDescription(event.target.value)} required />
+            <span className="mb-1.5 block text-xs font-semibold text-muted">Описание</span>
+            <textarea className="input min-h-28 text-sm" value={description} onChange={(event) => setDescription(event.target.value)} required />
           </label>
           <label>
-            <span className="mb-2 block text-sm font-semibold text-muted">Тип категории</span>
-            <select className="input" value={quizTypeId} onChange={(event) => setQuizTypeId(event.target.value)}>
+            <span className="mb-1.5 block text-xs font-semibold text-muted">Тип категории</span>
+            <select className="input text-sm" value={quizTypeId} onChange={(event) => setQuizTypeId(event.target.value)}>
               {quizTypes.map((item) => (
                 <option key={item.id} value={item.id}>
                   {getCategoryDisplayName(item.type)}
@@ -62,17 +63,24 @@ export function TopicForm({ quizTypes, topic }: TopicFormProps) {
               ))}
             </select>
           </label>
+          {selectedQuizType && (
+            <div className={`rounded-2xl border p-3 ${getCategoryCardClassName(selectedQuizType.type)}`}>
+              <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-bold ${getCategoryBadgeClassName(selectedQuizType.type)}`}>
+                {getCategoryDisplayName(selectedQuizType.type)}
+              </span>
+            </div>
+          )}
         </div>
         <div className="grid content-start gap-3">
           <div>
-            <span className="mb-2 block text-sm font-semibold text-muted">Обложка</span>
+            <span className="mb-1.5 block text-xs font-semibold text-muted">Обложка</span>
             <MediaUploadField kind="cover" value={coverImage} onChange={setCoverImage} />
           </div>
-          <p className="text-sm leading-6 text-muted">Обложка будет сохранена в формате 16:9 и красиво отобразится в сетке тем.</p>
+          <p className="text-xs leading-5 text-muted">Обложка будет сохранена в формате 16:9 и красиво отобразится в сетке тем.</p>
         </div>
       </div>
       {error && <p className="mt-4 text-sm text-danger">{error}</p>}
-      <div className="mt-7 flex justify-end border-t border-black/[0.06] pt-5">
+      <div className="mt-5 flex justify-end border-t border-black/[0.06] pt-4">
         <button type="submit" className="btn btn-primary w-full sm:w-auto" disabled={loading}>
           <Save size={18} />
           {loading ? "Сохраняю..." : "Сохранить"}

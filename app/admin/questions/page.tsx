@@ -12,17 +12,17 @@ export default function AdminQuestionsPage() {
   return (
     <AdminLayout>
       <CinemaBackground />
-      <div className="mb-6 flex flex-col justify-between gap-4 md:flex-row md:items-end">
+      <div className="mb-5 flex flex-col justify-between gap-3 md:flex-row md:items-end">
         <div>
-          <h1 className="text-4xl font-extrabold tracking-[-0.04em] text-foreground">Вопросы</h1>
-          <p className="mt-2 text-muted">Все вопросы квиза с быстрым просмотром, редактированием и удалением.</p>
+          <h1 className="text-3xl font-extrabold tracking-[-0.04em] text-foreground">Вопросы</h1>
+          <p className="mt-1 text-sm text-muted">Все вопросы квиза с быстрым просмотром, редактированием и удалением.</p>
         </div>
         <Link href="/admin/questions/new" className="btn btn-primary">
           <Plus size={18} />
           Добавить новый вопрос
         </Link>
       </div>
-      <QuestionsTable title="Вопросы" description="Все вопросы квиза с быстрым просмотром, редактированием и удалением." />
+      <QuestionsTable showHeader={false} />
     </AdminLayout>
   );
 }

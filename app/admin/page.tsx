@@ -22,14 +22,14 @@ export default async function AdminPage() {
   return (
     <AdminLayout>
       <CinemaBackground />
-      <section className="grid gap-5 md:grid-cols-2">
-        <div className="apple-card p-7">
-          <div className="text-sm font-bold uppercase tracking-[0.18em] text-primary/70">Темы</div>
-          <div className="mt-2 text-6xl font-extrabold tracking-[-0.04em] text-foreground">{topics}</div>
+      <section className="grid gap-4 md:grid-cols-2">
+        <div className="apple-card p-5">
+          <div className="text-xs font-bold uppercase tracking-[0.16em] text-primary/70">Темы</div>
+          <div className="mt-1 text-5xl font-extrabold tracking-[-0.04em] text-foreground">{topics}</div>
         </div>
-        <div className="apple-card p-7">
-          <div className="text-sm font-bold uppercase tracking-[0.18em] text-primary/70">Вопросы</div>
-          <div className="mt-2 text-6xl font-extrabold tracking-[-0.04em] text-foreground">{questions}</div>
+        <div className="apple-card p-5">
+          <div className="text-xs font-bold uppercase tracking-[0.16em] text-primary/70">Вопросы</div>
+          <div className="mt-1 text-5xl font-extrabold tracking-[-0.04em] text-foreground">{questions}</div>
         </div>
       </section>
       <LatestQuestionsTable />

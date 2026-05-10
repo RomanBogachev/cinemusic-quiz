@@ -100,7 +100,7 @@ export function MediaUploadField({ kind, value, onChange }: MediaUploadFieldProp
       )}
       <button
         type="button"
-        className="flex w-full min-w-0 flex-col items-center justify-center overflow-hidden rounded-3xl border border-dashed border-black/[0.12] bg-white/70 p-5 text-center transition hover:border-primary/35 hover:bg-white md:p-7"
+        className="flex w-full min-w-0 flex-col items-center justify-center overflow-hidden rounded-2xl border border-dashed border-black/[0.12] bg-white/70 p-4 text-center transition hover:border-primary/35 hover:bg-white md:p-5"
         onClick={() => inputRef.current?.click()}
         onDragOver={(event) => event.preventDefault()}
         onDrop={(event) => {
@@ -109,11 +109,11 @@ export function MediaUploadField({ kind, value, onChange }: MediaUploadFieldProp
           if (file) handleFile(file);
         }}
       >
-        {kind === "cover" ? <ImagePlus className="mb-3 text-primary" size={28} /> : <Upload className="mb-3 text-primary" size={28} />}
-        <span className="font-semibold text-foreground">
+        {kind === "cover" ? <ImagePlus className="mb-2 text-primary" size={24} /> : <Upload className="mb-2 text-primary" size={24} />}
+        <span className="text-sm font-semibold text-foreground">
           {loading ? "Загружаю..." : kind === "cover" && value ? "Изменить обложку или перетащить сюда" : "Загрузить файл или перетащить сюда"}
         </span>
-        {value && <span className="mt-2 max-w-full break-all text-sm leading-5 text-muted">{value}</span>}
+        {value && <span className="mt-1.5 max-w-full break-all text-xs leading-5 text-muted">{value}</span>}
       </button>
       {kind === "cover" && value && (
         <button

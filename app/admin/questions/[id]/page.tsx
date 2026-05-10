@@ -16,7 +16,7 @@ export default async function EditQuestionPage({ params }: { params: { id: strin
   return (
     <AdminLayout>
       <CinemaBackground />
-      <h1 className="mb-6 text-4xl font-extrabold tracking-[-0.04em] text-foreground">Редактирование вопроса</h1>
+      <h1 className="mb-5 text-3xl font-extrabold tracking-[-0.04em] text-foreground">Редактирование вопроса</h1>
       <QuestionForm topics={topics} question={question} />
     </AdminLayout>
   );

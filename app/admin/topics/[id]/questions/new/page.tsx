@@ -16,7 +16,7 @@ export default async function NewQuestionPage({ params }: { params: { id: string
   return (
     <AdminLayout>
       <CinemaBackground />
-      <h1 className="mb-6 text-4xl font-extrabold tracking-[-0.04em] text-foreground">Новый вопрос</h1>
+      <h1 className="mb-5 text-3xl font-extrabold tracking-[-0.04em] text-foreground">Новый вопрос</h1>
       <QuestionForm topics={topics} initialTopicId={topic.id} />
     </AdminLayout>
   );

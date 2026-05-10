@@ -9,6 +9,9 @@ export type CategoryMeta = {
   description: string;
   icon: "image" | "music" | "video";
   accent: string;
+  badgeClassName: string;
+  cardClassName: string;
+  iconClassName: string;
 };
 
 export type ApiError = {
