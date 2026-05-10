@@ -50,7 +50,7 @@ export function CinemaParticleCanvas({ variant = "apple" }: CinemaParticleCanvas
       canvas.style.height = `${height}px`;
       context.setTransform(ratio, 0, 0, ratio, 0, 0);
       particles.length = 0;
-      const particleCount = variant === "theater" ? 54 : 36;
+      const particleCount = variant === "theater" ? 38 : 36;
       for (let index = 0; index < particleCount; index += 1) {
         const hue = Math.random() > 0.72 ? "blue" : Math.random() > 0.45 ? "gold" : "white";
         particles.push({
@@ -58,8 +58,8 @@ export function CinemaParticleCanvas({ variant = "apple" }: CinemaParticleCanvas
           y: variant === "theater" ? height * (0.08 + Math.random() * 0.62) : Math.random() * height,
           vx: (Math.random() - 0.5) * (variant === "theater" ? 0.11 : 0.18),
           vy: (Math.random() - 0.5) * (variant === "theater" ? 0.08 : 0.18),
-          radius: variant === "theater" ? 0.7 + Math.random() * 3.8 : 1.5 + Math.random() * 4,
-          alpha: variant === "theater" ? 0.12 + Math.random() * 0.22 : 0.16 + Math.random() * 0.24,
+          radius: variant === "theater" ? 0.45 + Math.random() * 1.9 : 1.5 + Math.random() * 4,
+          alpha: variant === "theater" ? 0.08 + Math.random() * 0.14 : 0.16 + Math.random() * 0.24,
           hue
         });
       }
@@ -89,13 +89,13 @@ export function CinemaParticleCanvas({ variant = "apple" }: CinemaParticleCanvas
         if (particle.y > height + 20) particle.y = -20;
 
         const [red, green, blue] = variant === "theater" ? theaterColors[particle.hue] : [0, 122, 255];
-        const gradient = context.createRadialGradient(particle.x, particle.y, 0, particle.x, particle.y, particle.radius * (variant === "theater" ? 9 : 7));
+        const gradient = context.createRadialGradient(particle.x, particle.y, 0, particle.x, particle.y, particle.radius * (variant === "theater" ? 6 : 7));
         gradient.addColorStop(0, `rgba(${red}, ${green}, ${blue}, ${particle.alpha})`);
         gradient.addColorStop(0.38, `rgba(${red}, ${green}, ${blue}, ${particle.alpha * 0.34})`);
         gradient.addColorStop(1, `rgba(${red}, ${green}, ${blue}, 0)`);
         context.fillStyle = gradient;
         context.beginPath();
-        context.arc(particle.x, particle.y, particle.radius * (variant === "theater" ? 9 : 7), 0, Math.PI * 2);
+        context.arc(particle.x, particle.y, particle.radius * (variant === "theater" ? 6 : 7), 0, Math.PI * 2);
         context.fill();
       }
       animationFrame = requestAnimationFrame(draw);

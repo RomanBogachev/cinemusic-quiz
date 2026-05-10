@@ -23,6 +23,17 @@ export function CoverImageCropper({ imageSrc, aspect = 16 / 9, outputWidth = 128
   const [processing, setProcessing] = useState(false);
 
   useEffect(() => {
+    setCrop({ x: 0, y: 0 });
+    setZoom(1);
+    setCroppedAreaPixels(null);
+    setError(null);
+    setPreviewUrl((current) => {
+      if (current) URL.revokeObjectURL(current);
+      return null;
+    });
+  }, [imageSrc]);
+
+  useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
         onCancel();
@@ -104,7 +115,7 @@ export function CoverImageCropper({ imageSrc, aspect = 16 / 9, outputWidth = 128
 
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_280px]">
           <div>
-            <div className="relative h-[56vw] max-h-[520px] min-h-[280px] overflow-hidden rounded-3xl bg-black">
+            <div className="cover-cropper relative h-[56vw] max-h-[520px] min-h-[280px] overflow-hidden rounded-3xl bg-black shadow-[inset_0_0_0_1px_rgba(255,255,255,0.12)]">
               <Cropper
                 image={imageSrc}
                 crop={crop}
@@ -113,7 +124,7 @@ export function CoverImageCropper({ imageSrc, aspect = 16 / 9, outputWidth = 128
                 minZoom={1}
                 maxZoom={3}
                 objectFit="cover"
-                showGrid={false}
+                showGrid
                 onCropChange={setCrop}
                 onZoomChange={setZoom}
                 onCropComplete={(_, pixels) => setCroppedAreaPixels(pixels)}

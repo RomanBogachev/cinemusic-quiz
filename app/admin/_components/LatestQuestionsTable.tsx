@@ -155,7 +155,7 @@ export function QuestionsTable({ title = "Последние добавленн�
                   </td>
                   <td className="px-4 py-2.5">
                     <div className="flex justify-end gap-2">
-                      <Link href={`/topic/${question.topicCard.id}`} title="Просмотр" aria-label="Просмотр" className="inline-flex h-9 w-9 items-center justify-center rounded-full text-primary transition hover:bg-primary/10">
+                      <Link href={`/admin/questions/${question.id}/preview`} title="Просмотр" aria-label="Просмотр" className="inline-flex h-9 w-9 items-center justify-center rounded-full text-primary transition hover:bg-primary/10">
                         <Eye size={18} />
                       </Link>
                       <Link href={`/admin/questions/${question.id}`} title="Редактировать" aria-label="Редактировать" className="inline-flex h-9 w-9 items-center justify-center rounded-full text-warning transition hover:bg-warning/10">

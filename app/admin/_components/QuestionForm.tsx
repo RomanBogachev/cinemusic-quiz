@@ -29,6 +29,9 @@ export function QuestionForm({ topics, question, initialTopicId }: QuestionFormP
   const [answer, setAnswer] = useState(question?.answer ?? "");
   const [mediaFilePath, setMediaFilePath] = useState(question?.mediaFilePath ?? "");
   const [audioStart, setAudioStart] = useState(question?.audioStart?.toString() ?? "0");
+  const [audioEnd, setAudioEnd] = useState(question?.audioEnd?.toString() ?? "");
+  const [audioPreviewSrc, setAudioPreviewSrc] = useState<string | null>(null);
+  const [audioUploadState, setAudioUploadState] = useState<{ loading: boolean; error: string | null }>({ loading: false, error: null });
   const [videoStart, setVideoStart] = useState(question?.videoStart?.toString() ?? "0");
   const [videoEnd, setVideoEnd] = useState(question?.videoEnd?.toString() ?? "10");
   const [sortOrder] = useState(question?.sortOrder?.toString() ?? "0");
@@ -38,6 +41,7 @@ export function QuestionForm({ topics, question, initialTopicId }: QuestionFormP
 
   const uploadKind = mediaType === "image" ? "image" : mediaType === "audio" ? "audio" : "video";
   const mediaMismatch = Boolean(question && selectedTopic && question.topicCardId === topicCardId && question.mediaType !== expectedMediaType);
+  const audioEditorSrc = mediaType === "audio" ? audioPreviewSrc ?? mediaFilePath : "";
 
   useEffect(() => {
     if (!question || question.topicCardId !== topicCardId) {
@@ -53,6 +57,18 @@ export function QuestionForm({ topics, question, initialTopicId }: QuestionFormP
     event.preventDefault();
     if (mediaType === "video" && mediaFilePath && !videoReady) {
       setError("Дождитесь загрузки видео и таймлайна перед сохранением.");
+      return;
+    }
+    if (mediaType === "audio" && audioUploadState.loading) {
+      setError("Дождитесь завершения фоновой загрузки аудио перед сохранением вопроса.");
+      return;
+    }
+    if (mediaType === "audio" && audioUploadState.error) {
+      setError(audioUploadState.error);
+      return;
+    }
+    if (mediaType === "audio" && !mediaFilePath) {
+      setError("Дождитесь загрузки аудиофайла перед сохранением вопроса.");
       return;
     }
     setLoading(true);
@@ -129,13 +145,19 @@ export function QuestionForm({ topics, question, initialTopicId }: QuestionFormP
             <span className="mb-1.5 block text-xs font-semibold text-muted">Правильный ответ</span>
             <input className="input text-sm" value={answer} onChange={(event) => setAnswer(event.target.value)} required />
           </label>
-          {mediaType === "audio" && question && mediaFilePath && (
+          {mediaType === "audio" && audioEditorSrc && (
             <div className="min-w-0">
               <AudioWaveformEditor
-                questionId={question.id}
-                src={mediaFilePath}
-                initialStart={question.audioStart}
-                initialEnd={question.audioEnd}
+                questionId={question?.id}
+                src={audioEditorSrc}
+                initialStart={Number(audioStart) || question?.audioStart || 0}
+                initialEnd={audioEnd ? Number(audioEnd) : question?.audioEnd}
+                uploadStatus={audioUploadState.loading ? "uploading" : audioUploadState.error ? "error" : mediaFilePath ? "done" : "idle"}
+                uploadError={audioUploadState.error}
+                onRangeChange={({ start, end }) => {
+                  setAudioStart(start.toString());
+                  setAudioEnd(end.toString());
+                }}
                 onSaved={() => router.refresh()}
               />
             </div>
@@ -145,7 +167,13 @@ export function QuestionForm({ topics, question, initialTopicId }: QuestionFormP
         <aside className="grid min-w-0 content-start gap-4">
           <div className="min-w-0">
             <span className="mb-1.5 block text-xs font-semibold text-muted">Медиафайл</span>
-            <MediaUploadField kind={uploadKind} value={mediaFilePath} onChange={setMediaFilePath} />
+            <MediaUploadField
+              kind={uploadKind}
+              value={mediaFilePath}
+              onChange={setMediaFilePath}
+              onLocalPreviewChange={mediaType === "audio" ? setAudioPreviewSrc : undefined}
+              onUploadStateChange={mediaType === "audio" ? setAudioUploadState : undefined}
+            />
           </div>
 
           {mediaType === "audio" && (
@@ -157,12 +185,12 @@ export function QuestionForm({ topics, question, initialTopicId }: QuestionFormP
                 </label>
                 <label>
                   <span className="mb-1.5 block text-xs font-semibold text-muted">Конец, сек</span>
-                  <input className="input text-sm" type="number" min="0" step="0.001" value={question?.audioEnd?.toString() ?? ""} readOnly />
+                  <input className="input text-sm" type="number" min="0" step="0.001" value={audioEnd} readOnly />
                 </label>
               </div>
-              {(!question || !mediaFilePath) && (
+              {!audioEditorSrc && (
                 <div className="rounded-2xl border border-black/[0.06] bg-black/[0.03] p-4 text-xs leading-5 text-muted">
-                  Сначала сохраните аудиовопрос, затем откройте его редактирование и нарежьте фрагменты во встроенном waveform-редакторе.
+                  Загрузите аудиофайл, чтобы сразу открыть waveform и выбрать стартовый фрагмент.
                 </div>
               )}
             </div>

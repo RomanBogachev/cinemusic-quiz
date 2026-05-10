@@ -57,9 +57,9 @@ export function AudioSegmentPlayer({ src, start, segments }: AudioSegmentPlayerP
   useEffect(() => stop, [src, start, stop]);
 
   return (
-    <div className="min-h-[58vh] rounded-[26px] border border-amber-100/10 bg-[radial-gradient(ellipse_at_center,rgba(255,207,118,0.12),rgba(16,9,18,0.72)_48%,rgba(0,0,0,0.92)_100%)] p-5 pb-32 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] md:min-h-[62vh] md:p-7 md:pb-32">
+    <div className="flex h-full flex-col justify-center rounded-[22px] border border-amber-100/10 bg-[radial-gradient(ellipse_at_center,rgba(255,207,118,0.12),rgba(16,9,18,0.72)_48%,rgba(0,0,0,0.94)_100%)] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] md:p-6">
       <audio ref={audioRef} src={src} preload="auto" onEnded={() => setPlaying(null)} />
-      <div className="mx-auto mb-7 flex h-52 max-w-4xl items-end justify-center gap-2 rounded-[32px] border border-amber-100/15 bg-[linear-gradient(135deg,rgba(255,215,136,0.10),rgba(89,132,210,0.08)_45%,rgba(0,0,0,0.62))] p-8 shadow-[0_24px_80px_rgba(0,0,0,0.42),inset_0_1px_0_rgba(255,255,255,0.08)] md:gap-3">
+      <div className="mx-auto mb-5 flex h-28 w-full max-w-4xl items-end justify-center gap-2 rounded-[28px] border border-amber-100/15 bg-[linear-gradient(135deg,rgba(255,215,136,0.10),rgba(89,132,210,0.08)_45%,rgba(0,0,0,0.62))] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.42),inset_0_1px_0_rgba(255,255,255,0.08)] md:h-40 md:gap-3 md:p-8">
         {Array.from({ length: 18 }).map((_, index) => (
           <span
             key={index}

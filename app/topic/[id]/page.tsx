@@ -25,15 +25,13 @@ export default async function TopicPage({ params }: { params: { id: string } }) 
     .map((question) => ({ ...question, mediaType: question.mediaType as QuestionMediaType }));
 
   return (
-    <main className="relative min-h-screen overflow-hidden px-4 py-6 text-white md:px-10 md:py-8">
+    <main className="relative min-h-screen overflow-hidden text-white">
       <CinemaBackground variant="theater" />
-      <div className="relative z-10 mx-auto max-w-7xl">
-        <Link href={`/category/${topic.quizType.type}`} className="text-sm font-semibold uppercase tracking-[0.18em] text-amber-100/70 transition hover:text-amber-100">
+      <div className="relative z-10 min-h-screen px-4 py-4 md:px-8">
+        <Link href={`/category/${topic.quizType.type}`} className="absolute left-4 top-4 z-30 text-sm font-semibold uppercase tracking-[0.18em] text-amber-100/70 transition hover:text-amber-100 md:left-8">
           ← К темам
         </Link>
-        <div className="mt-7">
-          <QuestionPlayer topicTitle={topic.title} questions={questions} />
-        </div>
+        <QuestionPlayer topicTitle={topic.title} questions={questions} />
       </div>
     </main>
   );

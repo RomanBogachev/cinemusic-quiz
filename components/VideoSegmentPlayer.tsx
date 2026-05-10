@@ -107,13 +107,13 @@ export function VideoSegmentPlayer({ src, start, end }: VideoSegmentPlayerProps)
   useEffect(() => clearRaf, [clearRaf]);
 
   return (
-    <div className="rounded-[26px] border border-amber-100/10 bg-[radial-gradient(ellipse_at_center,rgba(255,235,190,0.08),rgba(0,0,0,0.88)_58%)] p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] md:p-3">
+    <div className="flex h-full flex-col rounded-[22px] border border-amber-100/10 bg-[radial-gradient(ellipse_at_center,rgba(255,235,190,0.08),rgba(0,0,0,0.90)_58%)] p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] md:p-3">
       <video
         ref={videoRef}
         src={src}
         preload="metadata"
         playsInline
-        className="mx-auto max-h-[68vh] min-h-[54vh] w-full rounded-[20px] bg-black object-contain shadow-[0_24px_80px_rgba(0,0,0,0.56)]"
+        className="mx-auto min-h-0 flex-1 rounded-[18px] bg-black object-contain shadow-[0_24px_80px_rgba(0,0,0,0.56)]"
       />
       <div className="flex justify-center p-4">
         <div className="media-controls-panel flex flex-wrap justify-center gap-2 p-2 md:gap-3">

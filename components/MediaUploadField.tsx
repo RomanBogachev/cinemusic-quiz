@@ -8,9 +8,11 @@ type MediaUploadFieldProps = {
   kind: "image" | "audio" | "video" | "cover";
   value?: string | null;
   onChange: (path: string) => void;
+  onLocalPreviewChange?: (url: string | null) => void;
+  onUploadStateChange?: (state: { loading: boolean; error: string | null }) => void;
 };
 
-export function MediaUploadField({ kind, value, onChange }: MediaUploadFieldProps) {
+export function MediaUploadField({ kind, value, onChange, onLocalPreviewChange, onUploadStateChange }: MediaUploadFieldProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -27,6 +29,7 @@ export function MediaUploadField({ kind, value, onChange }: MediaUploadFieldProp
   async function upload(file: File) {
     setLoading(true);
     setError(null);
+    onUploadStateChange?.({ loading: true, error: null });
     const formData = new FormData();
     formData.set("kind", kind);
     formData.set("file", file);
@@ -34,9 +37,12 @@ export function MediaUploadField({ kind, value, onChange }: MediaUploadFieldProp
     const payload = (await response.json()) as { path?: string; error?: string };
     setLoading(false);
     if (!response.ok || !payload.path) {
-      setError(payload.error ?? "Не удалось загрузить файл");
+      const message = payload.error ?? "Не удалось загрузить файл";
+      setError(message);
+      onUploadStateChange?.({ loading: false, error: message });
       return;
     }
+    onUploadStateChange?.({ loading: false, error: null });
     onChange(payload.path);
   }
 
@@ -55,6 +61,14 @@ export function MediaUploadField({ kind, value, onChange }: MediaUploadFieldProp
 
   function handleFile(file: File) {
     if (kind !== "cover") {
+      if (kind === "audio") {
+        const nextPreview = URL.createObjectURL(file);
+        setLocalPreview((current) => {
+          if (current) URL.revokeObjectURL(current);
+          return nextPreview;
+        });
+        onLocalPreviewChange?.(nextPreview);
+      }
       void upload(file);
       return;
     }
