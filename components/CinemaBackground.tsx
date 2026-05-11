@@ -4,23 +4,31 @@ type CinemaBackgroundProps = {
   variant?: "apple" | "theater";
 };
 
+type CinemaTheaterBackdropProps = {
+  className?: string;
+};
+
+export function CinemaTheaterBackdrop({ className = "pointer-events-none fixed inset-0 z-0 overflow-hidden bg-black" }: CinemaTheaterBackdropProps) {
+  return (
+    <div aria-hidden="true" className={className}>
+      <div
+        className="absolute inset-0 bg-cover bg-no-repeat"
+        style={{
+          backgroundImage: "url('/cinema-theme/cinema-hall-background.png')",
+          backgroundPosition: "center bottom"
+        }}
+      />
+      <div className="absolute inset-0 bg-black/20" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_34%,rgba(120,190,255,0.16)_0%,rgba(120,190,255,0.07)_22%,rgba(0,0,0,0)_52%)]" />
+      <div className="absolute inset-0 hidden bg-[url('/cinema-theme/cinema-particles.svg')] bg-cover bg-center opacity-35 motion-reduce:block" />
+      <CinemaParticleCanvas variant="theater" />
+    </div>
+  );
+}
+
 export function CinemaBackground({ variant = "apple" }: CinemaBackgroundProps) {
   if (variant === "theater") {
-    return (
-      <div aria-hidden="true" className="pointer-events-none fixed inset-0 z-0 overflow-hidden bg-black">
-        <div
-          className="absolute inset-0 bg-cover bg-no-repeat"
-          style={{
-            backgroundImage: "url('/cinema-theme/cinema-hall-background.png')",
-            backgroundPosition: "center bottom"
-          }}
-        />
-        <div className="absolute inset-0 bg-black/20" />
-        <div className="absolute left-1/2 top-[18%] h-[28rem] w-[min(52rem,90vw)] -translate-x-1/2 rounded-full bg-cyan-300/15 blur-3xl" />
-        <div className="absolute inset-0 hidden bg-[url('/cinema-theme/cinema-particles.svg')] bg-cover bg-center opacity-35 motion-reduce:block" />
-        <CinemaParticleCanvas variant="theater" />
-      </div>
-    );
+    return <CinemaTheaterBackdrop />;
   }
 
   return (

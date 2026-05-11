@@ -29,4 +29,4 @@ COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 RUN mkdir -p /app/data /app/uploads/images /app/uploads/audio /app/uploads/video /app/uploads/covers
 EXPOSE 3000
 
-CMD ["sh", "-c", "node node_modules/prisma/build/index.js migrate deploy && node prisma/seed.js && node server.js"]
+CMD ["sh", "-c", "node node_modules/prisma/build/index.js migrate deploy && node server.js"]

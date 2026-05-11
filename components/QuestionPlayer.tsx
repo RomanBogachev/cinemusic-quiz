@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { ArrowLeft, ArrowRight, Eye, EyeOff, Maximize2, Minimize2 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AudioSegmentPlayer } from "@/components/AudioSegmentPlayer";
+import { CinemaTheaterBackdrop } from "@/components/CinemaBackground";
 import { ImageViewer } from "@/components/ImageViewer";
 import { VideoSegmentPlayer } from "@/components/VideoSegmentPlayer";
 import type { QuestionMediaType } from "@/lib/types";
@@ -42,6 +43,7 @@ export function QuestionPlayer({ topicTitle, questions }: { topicTitle: string; 
   const mediaShellRef = useRef<HTMLDivElement>(null);
   const hideTimerRef = useRef<number | null>(null);
   const question = items[index];
+  const screenWidth = fullscreen ? "min(92vw, 1750px, calc((100vh - 12rem) * 16 / 9))" : "min(96vw, 1375px, calc((100vh - 13rem) * 16 / 9))";
 
   useEffect(() => {
     setItems(shuffled(questions));
@@ -138,23 +140,17 @@ export function QuestionPlayer({ topicTitle, questions }: { topicTitle: string; 
           onMouseMove={revealControls}
           onPointerMove={revealControls}
           onTouchStart={revealControls}
-          className={`group relative min-h-[calc(100vh-2rem)] overflow-hidden bg-transparent transition fullscreen:h-screen fullscreen:w-screen fullscreen:bg-black ${
+          className={`cinema-stage-shell group relative overflow-hidden transition ${
+            fullscreen ? "h-screen w-screen bg-black" : "min-h-[calc(100vh-2rem)] bg-transparent"
+          } ${
             controlsVisible ? "cursor-auto" : "cursor-none"
           }`}
         >
-          <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-0 hidden overflow-hidden bg-black fullscreen:block">
-            <div
-              className="absolute inset-0 bg-cover bg-no-repeat"
-              style={{
-                backgroundImage: "url('/cinema-theme/cinema-hall-background.png')",
-                backgroundPosition: "center bottom"
-              }}
-            />
-            <div className="absolute inset-0 bg-black/20" />
-            <div className="absolute left-1/2 top-[18%] h-[28rem] w-[min(52rem,90vw)] -translate-x-1/2 rounded-full bg-cyan-300/15 blur-3xl" />
-          </div>
+          <CinemaTheaterBackdrop
+            className={`pointer-events-none absolute inset-0 z-0 overflow-hidden bg-black ${fullscreen ? "block" : "hidden"}`}
+          />
 
-          <div className="relative z-20 flex min-h-[calc(100vh-2rem)] flex-col px-4 pb-[20vh] pt-4 fullscreen:h-screen fullscreen:px-8 fullscreen:pb-[20vh] md:px-8">
+          <div className={`relative z-20 flex flex-col px-4 pt-4 md:px-8 ${fullscreen ? "h-screen pb-[17vh] px-8" : "min-h-[calc(100vh-2rem)] pb-[18vh]"}`}>
             <div className="flex items-start justify-between gap-4">
               <div className="text-left text-white">
                 <div className="text-xs font-black uppercase leading-none tracking-[0.22em] md:text-sm">CINEMUSIC</div>
@@ -170,9 +166,12 @@ export function QuestionPlayer({ topicTitle, questions }: { topicTitle: string; 
               {question.title && <p className="mt-2 text-sm text-amber-50/70 md:text-base">{question.title}</p>}
             </div>
 
-            <div className="relative z-10 mx-auto mt-2 aspect-[16/7] w-[min(92vw,1120px)] max-w-full rounded-[26px] border border-cyan-100/75 bg-black p-1 shadow-[0_0_0_1px_rgba(255,255,255,0.14),0_0_34px_rgba(143,218,255,0.95),0_0_120px_rgba(42,151,255,0.46),0_34px_120px_rgba(0,0,0,0.74)] md:w-[min(72vw,1120px)]">
-              <div className="pointer-events-none absolute -inset-10 rounded-[42px] bg-[radial-gradient(ellipse_at_center,rgba(100,194,255,0.26),transparent_68%)] blur-2xl" />
-              <div className="relative h-full overflow-hidden rounded-[22px] bg-black">
+            <div
+              className="relative z-10 mx-auto mt-2 aspect-video max-w-full shrink-0 rounded-[26px] border border-cyan-50/80 bg-black/90 p-[3px] shadow-[0_0_0_1px_rgba(255,255,255,0.18),0_0_22px_rgba(125,211,252,0.30),0_0_46px_rgba(14,165,233,0.18),0_22px_58px_rgba(0,0,0,0.55)]"
+              style={{ width: screenWidth }}
+            >
+              <div className="pointer-events-none absolute inset-0 rounded-[26px] shadow-[inset_0_1px_0_rgba(255,255,255,0.28),inset_0_0_24px_rgba(125,211,252,0.10)]" />
+              <div className="absolute inset-[3px] overflow-hidden rounded-[22px] bg-black">
                 {question.mediaType === "image" && <ImageViewer src={question.mediaFilePath} title={question.title} />}
                 {question.mediaType === "audio" && (
                   <AudioSegmentPlayer

@@ -1,6 +1,6 @@
 "use client";
 
-import { Maximize2, Play, Square } from "lucide-react";
+import { Play } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 type VideoSegmentPlayerProps = {
@@ -99,10 +99,6 @@ export function VideoSegmentPlayer({ src, start, end }: VideoSegmentPlayerProps)
     }
   }
 
-  async function openFullscreen() {
-    await videoRef.current?.requestFullscreen?.();
-  }
-
   useEffect(() => stop, [src, start, end, stop]);
   useEffect(() => clearRaf, [clearRaf]);
 
@@ -113,26 +109,15 @@ export function VideoSegmentPlayer({ src, start, end }: VideoSegmentPlayerProps)
         src={src}
         preload="metadata"
         playsInline
-        className="mx-auto min-h-0 flex-1 rounded-[18px] bg-black object-contain shadow-[0_24px_80px_rgba(0,0,0,0.56)]"
+        className="mx-auto min-h-0 w-full flex-1 rounded-[18px] bg-black object-contain shadow-[0_24px_80px_rgba(0,0,0,0.56)]"
       />
       <div className="flex justify-center p-4">
         <div className="media-controls-panel flex flex-wrap justify-center gap-2 p-2 md:gap-3">
-        <button type="button" onClick={() => void playSegment()} className="media-control-button media-control-button-primary">
-          <Play size={18} />
-          Играть фрагмент
-        </button>
-        <button type="button" onClick={stop} className="media-control-button">
-          <Square size={18} />
-          Стоп
-        </button>
-        <button type="button" onClick={() => void openFullscreen()} className="media-control-button">
-          <Maximize2 size={18} />
-          На весь экран
-        </button>
+          <button type="button" onClick={() => void playSegment()} className="media-control-button media-control-button-primary">
+            <Play size={18} />
+            Играть фрагмент
+          </button>
         </div>
-      </div>
-      <div className="pb-4 text-center text-sm text-white/55">
-        Фрагмент: {start}–{end} сек. {playing ? "Идет воспроизведение." : "Ожидает запуска."}
       </div>
       {error && <div className="pb-4 text-center text-sm text-danger">{error}</div>}
     </div>

@@ -1,19 +1,39 @@
 services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: cinemusic-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-cinemusic}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cinemusic_password}
+      POSTGRES_DB: ${POSTGRES_DB:-cinemusic_quiz}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - cinemusic_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
   quiz:
     build: .
     container_name: quiz-for-friends
+    depends_on:
+      postgres:
+        condition: service_healthy
     ports:
       - "3000:3000"
     environment:
-      DATABASE_URL: file:/app/data/quiz.db
+      DATABASE_URL: postgresql://${POSTGRES_USER:-cinemusic}:${POSTGRES_PASSWORD:-cinemusic_password}@postgres:5432/${POSTGRES_DB:-cinemusic_quiz}?schema=public
       UPLOAD_DIR: /app/uploads
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-change-me}
       NEXT_PUBLIC_APP_URL: http://localhost:3000
     volumes:
-      - quiz_db:/app/data
       - quiz_uploads:/app/uploads
     restart: unless-stopped
 
 volumes:
   quiz_uploads:
-  quiz_db:
+  cinemusic_postgres_data:

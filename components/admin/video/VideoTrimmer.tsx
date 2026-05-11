@@ -1,8 +1,8 @@
 "use client";
 
-import { Pause, Play, RotateCcw, SkipBack, SkipForward, Square } from "lucide-react";
+import { Minus, Pause, Play, Plus, Square } from "lucide-react";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { clamp, formatTime, parseTime } from "@/lib/time";
+import { clamp, formatTime } from "@/lib/time";
 
 type VideoRange = {
   start: number;
@@ -235,8 +235,7 @@ export function VideoTrimmer({
   const [start, setStart] = useState(initialStart ?? 0);
   const [end, setEnd] = useState(initialEnd ?? defaultSelectionDuration);
   const [currentTime, setCurrentTime] = useState(initialStart ?? 0);
-  const [startInput, setStartInput] = useState(formatTime(initialStart ?? 0));
-  const [endInput, setEndInput] = useState(formatTime(initialEnd ?? defaultSelectionDuration));
+  const [zoom, setZoom] = useState(34);
   const [thumbnails, setThumbnails] = useState<VideoThumbnail[]>([]);
   const [thumbnailsLoading, setThumbnailsLoading] = useState(false);
   const [metadataLoading, setMetadataLoading] = useState(true);
@@ -248,6 +247,7 @@ export function VideoTrimmer({
   const widthPercent = secondsToPercent(selectionDuration, duration);
   const rightPercent = secondsToPercent(end, duration);
   const playheadPercent = secondsToPercent(currentTime, duration);
+  const timelineWidth = duration > 0 ? `${Math.max(1000, duration * zoom)}px` : "100%";
 
   const stopRaf = useCallback(() => {
     if (rafRef.current) {
@@ -260,20 +260,14 @@ export function VideoTrimmer({
     }
   }, []);
 
-  const syncInputs = useCallback((nextStart: number, nextEnd: number) => {
-    setStartInput(formatTime(nextStart));
-    setEndInput(formatTime(nextEnd));
-  }, []);
-
   const emitRange = useCallback((nextStart: number, nextEnd: number) => {
     const roundedStart = Number(nextStart.toFixed(3));
     const roundedEnd = Number(nextEnd.toFixed(3));
     rangeRef.current = { start: roundedStart, end: roundedEnd };
     setStart(roundedStart);
     setEnd(roundedEnd);
-    syncInputs(roundedStart, roundedEnd);
     onChange({ start: roundedStart, end: roundedEnd });
-  }, [onChange, syncInputs]);
+  }, [onChange]);
 
   const normalizeRange = useCallback((nextStart: number, nextEnd: number) => {
     if (!duration) return null;
@@ -310,13 +304,6 @@ export function VideoTrimmer({
     stopRaf();
   }, [stopRaf]);
 
-  const seekTo = useCallback((seconds: number) => {
-    const video = videoRef.current;
-    const nextTime = clamp(seconds, 0, duration || 0);
-    if (video) video.currentTime = nextTime;
-    setCurrentTime(nextTime);
-  }, [duration]);
-
   const seekPreview = useCallback((seconds: number) => {
     const video = videoRef.current;
     const nextTime = clamp(seconds, 0, Math.max(0, (duration || 0) - 0.05));
@@ -330,43 +317,11 @@ export function VideoTrimmer({
     stopRaf();
   }, [duration, stopRaf]);
 
-  const resetRange = useCallback(() => {
-    if (!duration) return;
-    const savedStart = initialStart ?? 0;
-    const fallbackEnd = Math.min(duration, defaultSelectionDuration);
-    const savedEnd = initialEnd && initialEnd > savedStart ? initialEnd : fallbackEnd;
-    const normalized = setRange(savedStart, savedEnd);
-    if (normalized) seekPreview(normalized.start);
-  }, [defaultSelectionDuration, duration, initialEnd, initialStart, seekPreview, setRange]);
-
-  const selectFirstSeconds = useCallback(() => {
-    if (!duration) return;
-    const normalized = setRange(0, Math.min(duration, defaultSelectionDuration));
-    if (normalized) seekPreview(normalized.start);
-  }, [defaultSelectionDuration, duration, seekPreview, setRange]);
-
-  const selectWholeVideo = useCallback(() => {
-    if (!duration) return;
-    const normalized = setRange(0, duration);
-    if (normalized) seekPreview(normalized.start);
-  }, [duration, seekPreview, setRange]);
-
   const tick = useCallback(() => {
     const video = videoRef.current;
     if (!video) return;
     const nextTime = video.currentTime;
-    const currentEnd = rangeRef.current.end;
     setCurrentTime(nextTime);
-
-    if (nextTime >= currentEnd) {
-      video.pause();
-      video.currentTime = currentEnd;
-      setCurrentTime(currentEnd);
-      previewSelectionRef.current = false;
-      setIsPlaying(false);
-      stopRaf();
-      return;
-    }
 
     if (video.paused || video.ended) {
       previewSelectionRef.current = false;
@@ -378,31 +333,6 @@ export function VideoTrimmer({
     rafRef.current = requestAnimationFrame(tick);
   }, [stopRaf]);
 
-  const playSelection = useCallback(async () => {
-    const video = videoRef.current;
-    if (!video || !duration) return;
-    const currentStart = start;
-    const currentEnd = end;
-    rangeRef.current = { start: currentStart, end: currentEnd };
-    stopRaf();
-    previewSelectionRef.current = true;
-    video.pause();
-    await waitForSeek(video, currentStart);
-    video.currentTime = currentStart;
-    setCurrentTime(currentStart);
-
-    try {
-      await video.play();
-      setIsPlaying(true);
-      rafRef.current = requestAnimationFrame(tick);
-      intervalRef.current = window.setInterval(tick, 80);
-    } catch {
-      previewSelectionRef.current = false;
-      setIsPlaying(false);
-      setError("Браузер не смог запустить воспроизведение. Попробуйте нажать Play ещё раз.");
-    }
-  }, [duration, end, start, stopRaf, tick]);
-
   const togglePlay = useCallback(async () => {
     const video = videoRef.current;
     if (!video || !duration) return;
@@ -411,15 +341,11 @@ export function VideoTrimmer({
       return;
     }
 
-    const currentStart = start;
-    const currentEnd = end;
-    rangeRef.current = { start: currentStart, end: currentEnd };
-    if (video.currentTime < currentStart || video.currentTime >= currentEnd) {
-      await waitForSeek(video, currentStart);
-      video.currentTime = currentStart;
-      setCurrentTime(currentStart);
-    }
-    previewSelectionRef.current = true;
+    const playhead = currentTime;
+    await waitForSeek(video, playhead);
+    video.currentTime = playhead;
+    setCurrentTime(playhead);
+    previewSelectionRef.current = false;
     try {
       await video.play();
       setIsPlaying(true);
@@ -430,17 +356,16 @@ export function VideoTrimmer({
       setIsPlaying(false);
       setError("Браузер не смог запустить воспроизведение.");
     }
-  }, [duration, end, isPlaying, pause, start, tick]);
+  }, [currentTime, duration, isPlaying, pause, tick]);
 
   const stop = useCallback(() => {
     const video = videoRef.current;
-    const currentStart = start;
     rangeRef.current = { start, end };
     if (video) {
       video.pause();
-      video.currentTime = currentStart;
+      video.currentTime = 0;
     }
-    setCurrentTime(currentStart);
+    setCurrentTime(0);
     previewSelectionRef.current = false;
     setIsPlaying(false);
     stopRaf();
@@ -459,10 +384,22 @@ export function VideoTrimmer({
       rangeEnd: rangeRef.current.end
     };
 
-    if (mode === "start") seekPreview(rangeRef.current.start);
-    if (mode === "end") seekPreview(rangeRef.current.end);
-    if (mode === "range") seekPreview(rangeRef.current.start);
-    if (mode === "playhead") seekPreview(secondsFromClientX(event.clientX));
+    if (mode === "playhead") {
+      seekPreview(secondsFromClientX(event.clientX));
+      return;
+    }
+
+    if (mode === "start") {
+      seekPreview(rangeRef.current.start);
+      return;
+    }
+
+    if (mode === "end") {
+      seekPreview(rangeRef.current.end);
+      return;
+    }
+
+    seekPreview(rangeRef.current.start);
   }, [duration, pause, secondsFromClientX, seekPreview]);
 
   const updateDrag = useCallback((event: React.PointerEvent<HTMLElement>) => {
@@ -477,22 +414,22 @@ export function VideoTrimmer({
     }
 
     if (drag.mode === "start") {
-      const normalized = setRange(pointerSeconds, drag.rangeEnd);
-      if (normalized) seekPreview(normalized.start);
+      const nextRange = setRange(pointerSeconds, drag.rangeEnd);
+      if (nextRange) seekPreview(nextRange.start);
       return;
     }
 
     if (drag.mode === "end") {
-      const normalized = setRange(drag.rangeStart, pointerSeconds);
-      if (normalized) seekPreview(normalized.end);
+      const nextRange = setRange(drag.rangeStart, pointerSeconds);
+      if (nextRange) seekPreview(nextRange.end);
       return;
     }
 
     const selectionLength = drag.rangeEnd - drag.rangeStart;
     const delta = pointerSeconds - drag.pointerStart;
     const nextStart = clamp(drag.rangeStart + delta, 0, duration - selectionLength);
-    const normalized = setRange(nextStart, nextStart + selectionLength);
-    if (normalized) seekPreview(normalized.start);
+    const nextRange = setRange(nextStart, nextStart + selectionLength);
+    if (nextRange) seekPreview(nextRange.start);
   }, [duration, secondsFromClientX, seekPreview, setRange]);
 
   const finishDrag = useCallback((event: React.PointerEvent<HTMLElement>) => {
@@ -506,26 +443,8 @@ export function VideoTrimmer({
     dragRef.current = null;
   }, []);
 
-  function applyManualInput(kind: "start" | "end") {
-    const nextValue = parseTime(kind === "start" ? startInput : endInput);
-    if (nextValue == null) {
-      setError("Введите время в секундах или в формате mm:ss.SSS.");
-      syncInputs(start, end);
-      return;
-    }
-
-    const nextStart = kind === "start" ? nextValue : start;
-    const nextEnd = kind === "end" ? nextValue : end;
-    const normalized = normalizeRange(nextStart, nextEnd);
-    if (!normalized || Math.abs(normalized.start - nextStart) > 0.001 || Math.abs(normalized.end - nextEnd) > 0.001) {
-      setError(`Фрагмент должен быть внутри видео и длиться не меньше ${minSelectionDuration} сек.`);
-      syncInputs(start, end);
-      return;
-    }
-
-    emitRange(normalized.start, normalized.end);
-    seekPreview(kind === "start" ? normalized.start : normalized.end);
-    setError(null);
+  function setTimelineZoom(nextZoom: number) {
+    setZoom(clamp(nextZoom, 18, 120));
   }
 
   useLayoutEffect(() => {
@@ -619,134 +538,118 @@ export function VideoTrimmer({
       <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
         <button type="button" className="media-control-button" disabled={!duration} onClick={() => void togglePlay()}>
           {isPlaying ? <Pause size={18} /> : <Play size={18} />}
-          {isPlaying ? "Пауза" : "Play"}
+          {isPlaying ? "Пауза" : "Play / Pause"}
         </button>
         <button type="button" className="media-control-button" disabled={!duration} onClick={stop}>
           <Square size={18} />
           Stop
         </button>
-        <button type="button" className="media-control-button media-control-button-primary" disabled={!duration} onClick={() => void playSelection()}>
-          <Play size={18} />
-          Проиграть выбранный фрагмент
-        </button>
-        <button type="button" className="media-control-button" disabled={!duration} onClick={() => seekTo(start)} aria-label="Перейти к началу фрагмента">
-          <SkipBack size={18} />
-          К началу
-        </button>
-        <button type="button" className="media-control-button" disabled={!duration} onClick={() => seekTo(end)} aria-label="Перейти к концу фрагмента">
-          <SkipForward size={18} />
-          К концу
-        </button>
       </div>
 
       <div className="mt-4 rounded-[24px] border border-white/10 bg-white/[0.04] p-4">
         <div className="mb-3 flex flex-col justify-between gap-2 text-sm text-white/70 md:flex-row md:items-center">
-          <span>{metadataLoading ? "Загружаем metadata..." : `Позиция ${formatTime(currentTime)} из ${formatTime(duration)}`}</span>
-          <span>{thumbnailsLoading ? "Готовим кадры таймлайна..." : `Выбран фрагмент ${formatTime(selectionDuration)}`}</span>
+          <span>{metadataLoading ? "Загружаем metadata..." : `Текущий кадр: ${formatTime(currentTime)} из ${formatTime(duration)}`}</span>
+          <span>
+            {thumbnailsLoading
+              ? "Готовим кадры таймлайна..."
+              : `Фрагмент: ${formatTime(start)} - ${formatTime(end)} · ${formatTime(selectionDuration)}`}
+          </span>
         </div>
 
-        <div
-          ref={timelineRef}
-          className="relative h-[104px] w-full touch-none overflow-hidden rounded-[20px] border border-white/10 bg-[#17171c]"
-          onPointerDown={(event) => {
-            startDrag("playhead", event);
-          }}
-          onPointerMove={updateDrag}
-          onPointerUp={finishDrag}
-          onPointerCancel={finishDrag}
-        >
-          <div className="absolute inset-0 grid" style={{ gridTemplateColumns: `repeat(${Math.max(thumbnails.length, DEFAULT_THUMBNAIL_COUNT)}, minmax(0, 1fr))` }}>
-            {thumbnails.length > 0 ? thumbnails.map((thumbnail, index) => (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img key={`${thumbnail.time}-${index}`} src={thumbnail.url} alt="" className="h-full w-full object-cover opacity-80" />
-            )) : Array.from({ length: DEFAULT_THUMBNAIL_COUNT }).map((_, index) => (
+        <div className="relative overflow-x-auto overflow-y-hidden rounded-[20px] border border-white/10 bg-[#17171c]" style={{ overscrollBehaviorX: "contain" }}>
+          <div className="absolute right-3 top-3 z-30 flex items-center gap-1 rounded-full border border-white/12 bg-black/70 p-1 shadow-soft backdrop-blur">
+            <button
+              type="button"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-full text-white transition hover:bg-white/15 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/30"
+              aria-label="Уменьшить масштаб timeline"
+              onClick={() => setTimelineZoom(zoom - 12)}
+            >
+              <Minus size={16} />
+            </button>
+            <button
+              type="button"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-full text-white transition hover:bg-white/15 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/30"
+              aria-label="Увеличить масштаб timeline"
+              onClick={() => setTimelineZoom(zoom + 12)}
+            >
+              <Plus size={16} />
+            </button>
+          </div>
+          <div
+            ref={timelineRef}
+            className="relative h-[132px] min-w-full touch-none"
+            style={{ width: timelineWidth }}
+            onPointerDown={(event) => {
+              startDrag("playhead", event);
+            }}
+            onPointerMove={updateDrag}
+            onPointerUp={finishDrag}
+            onPointerCancel={finishDrag}
+          >
+            <div className="absolute inset-x-0 top-0 z-10 flex justify-between border-b border-white/10 bg-black/25 px-3 py-1 text-[10px] font-semibold text-white/65">
+              {[0, 0.25, 0.5, 0.75, 1].map((ratio) => (
+                <span key={ratio}>{formatTime((duration || 0) * ratio)}</span>
+              ))}
+            </div>
+            <div className="absolute inset-x-0 bottom-0 top-6 grid" style={{ gridTemplateColumns: `repeat(${Math.max(thumbnails.length, DEFAULT_THUMBNAIL_COUNT)}, minmax(0, 1fr))` }}>
+              {thumbnails.length > 0 ? thumbnails.map((thumbnail, index) => (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img key={`${thumbnail.time}-${index}`} src={thumbnail.url} alt="" className="h-full w-full object-cover opacity-80" />
+              )) : Array.from({ length: DEFAULT_THUMBNAIL_COUNT }).map((_, index) => (
               <div
                 key={index}
                 className="h-full border-r border-white/5 bg-[linear-gradient(135deg,rgba(255,255,255,0.14),rgba(255,255,255,0.03))]"
                 style={{ opacity: 0.45 + (index % 4) * 0.12 }}
               />
-            ))}
-          </div>
+              ))}
+            </div>
 
-          <div className="absolute inset-y-0 left-0 bg-black/62" style={{ width: `${leftPercent}%` }} />
-          <div className="absolute inset-y-0 bg-black/62" style={{ left: `${rightPercent}%`, right: 0 }} />
-          <div
-            className="absolute inset-y-2 cursor-grab rounded-[18px] border border-primary/80 bg-primary/24 shadow-[0_0_28px_rgba(0,122,255,0.32)] active:cursor-grabbing"
-            style={{ left: `${leftPercent}%`, width: `${widthPercent}%` }}
-            onPointerDown={(event) => startDrag("range", event)}
-            onPointerMove={updateDrag}
-            onPointerUp={finishDrag}
-            onPointerCancel={finishDrag}
-            aria-label="Выбранный диапазон"
-          />
-          <button
-            type="button"
-            className="absolute top-1/2 z-20 h-[88px] w-5 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white bg-white shadow-floating outline-none focus-visible:ring-4 focus-visible:ring-primary/40"
-            style={{ left: `${leftPercent}%` }}
-            onPointerDown={(event) => startDrag("start", event)}
-            onPointerMove={updateDrag}
-            onPointerUp={finishDrag}
-            onPointerCancel={finishDrag}
-            aria-label="Начало фрагмента"
-          />
-          <button
-            type="button"
-            className="absolute top-1/2 z-20 h-[88px] w-5 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white bg-white shadow-floating outline-none focus-visible:ring-4 focus-visible:ring-primary/40"
-            style={{ left: `${rightPercent}%` }}
-            onPointerDown={(event) => startDrag("end", event)}
-            onPointerMove={updateDrag}
-            onPointerUp={finishDrag}
-            onPointerCancel={finishDrag}
-            aria-label="Конец фрагмента"
-          />
-          <div className="absolute inset-y-0 z-10 w-0.5 bg-white shadow-[0_0_12px_rgba(255,255,255,0.85)]" style={{ left: `${playheadPercent}%` }} />
+            <div className="absolute bottom-0 left-0 top-6 bg-black/62" style={{ width: `${leftPercent}%` }} />
+            <div className="absolute bottom-0 top-6 bg-black/62" style={{ left: `${rightPercent}%`, right: 0 }} />
+            <div
+              className="absolute bottom-3 top-9 cursor-grab rounded-[18px] border border-amber-200/90 bg-amber-300/28 shadow-[0_0_28px_rgba(251,191,36,0.32)] active:cursor-grabbing"
+              style={{ left: `${leftPercent}%`, width: `${widthPercent}%` }}
+              onPointerDown={(event) => startDrag("range", event)}
+              onPointerMove={updateDrag}
+              onPointerUp={finishDrag}
+              onPointerCancel={finishDrag}
+              aria-label="Выбранный диапазон"
+            />
+            <button
+              type="button"
+              className="absolute top-[calc(50%+12px)] z-20 h-[88px] w-5 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white bg-white shadow-floating outline-none focus-visible:ring-4 focus-visible:ring-primary/40"
+              style={{ left: `${leftPercent}%` }}
+              onPointerDown={(event) => startDrag("start", event)}
+              onPointerMove={updateDrag}
+              onPointerUp={finishDrag}
+              onPointerCancel={finishDrag}
+              aria-label="Начало фрагмента"
+            />
+            <button
+              type="button"
+              className="absolute top-[calc(50%+12px)] z-20 h-[88px] w-5 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white bg-white shadow-floating outline-none focus-visible:ring-4 focus-visible:ring-primary/40"
+              style={{ left: `${rightPercent}%` }}
+              onPointerDown={(event) => startDrag("end", event)}
+              onPointerMove={updateDrag}
+              onPointerUp={finishDrag}
+              onPointerCancel={finishDrag}
+              aria-label="Конец фрагмента"
+            />
+            <div className="absolute bottom-0 top-6 z-10 w-0.5 bg-rose-400 shadow-[0_0_14px_rgba(251,113,133,0.9)]" style={{ left: `${playheadPercent}%` }} />
+            <button
+              type="button"
+              className="absolute bottom-2 z-30 h-5 w-5 -translate-x-1/2 rounded-full border-2 border-white bg-rose-500 shadow-[0_0_18px_rgba(251,113,133,0.85)] transition hover:scale-110 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-rose-300/35"
+              style={{ left: `${playheadPercent}%` }}
+              onPointerDown={(event) => startDrag("playhead", event)}
+              onPointerMove={updateDrag}
+              onPointerUp={finishDrag}
+              onPointerCancel={finishDrag}
+              aria-label="Переместить playhead"
+            />
+          </div>
         </div>
 
         <p className="mt-3 text-sm text-white/58">Перетащите края, выделенную область или playhead. В квизе будет проигрываться только выбранный диапазон.</p>
-      </div>
-
-      <div className="mt-4 grid gap-3 md:grid-cols-3">
-        <label>
-          <span className="mb-2 block text-sm font-semibold text-white/70">Начало</span>
-          <input
-            className="input bg-white/95 text-foreground"
-            value={startInput}
-            onChange={(event) => setStartInput(event.target.value)}
-            onBlur={() => applyManualInput("start")}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") applyManualInput("start");
-            }}
-          />
-        </label>
-        <label>
-          <span className="mb-2 block text-sm font-semibold text-white/70">Конец</span>
-          <input
-            className="input bg-white/95 text-foreground"
-            value={endInput}
-            onChange={(event) => setEndInput(event.target.value)}
-            onBlur={() => applyManualInput("end")}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") applyManualInput("end");
-            }}
-          />
-        </label>
-        <label>
-          <span className="mb-2 block text-sm font-semibold text-white/70">Длительность</span>
-          <input className="input bg-white/80 text-foreground" value={formatTime(selectionDuration)} readOnly />
-        </label>
-      </div>
-
-      <div className="mt-4 flex flex-wrap gap-2">
-        <button type="button" className="media-control-button" disabled={!duration} onClick={resetRange}>
-          <RotateCcw size={18} />
-          Сбросить
-        </button>
-        <button type="button" className="media-control-button" disabled={!duration} onClick={selectFirstSeconds}>
-          Выбрать первые {defaultSelectionDuration} секунд
-        </button>
-        <button type="button" className="media-control-button" disabled={!duration} onClick={selectWholeVideo}>
-          Выбрать всё видео
-        </button>
       </div>
 
       {error && <p className="mt-3 rounded-2xl border border-danger/25 bg-danger/15 p-3 text-sm text-white">{error}</p>}
