@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Eye, Pencil, Plus } from "lucide-react";
+import { Pencil, Plus } from "lucide-react";
 import { AdminLayout } from "@/components/AdminLayout";
 import { CinemaBackground } from "@/components/CinemaBackground";
 import { DeleteButton } from "@/app/admin/_components/DeleteButton";
@@ -13,7 +13,7 @@ export default async function AdminTopicsPage() {
   if (!isAdminAuthenticated()) redirect("/admin");
   await ensureCategories();
   const topics = await prisma.topicCard.findMany({
-    include: { quizType: true, _count: { select: { questions: true } } },
+    include: { quizType: true },
     orderBy: { createdAt: "desc" }
   });
 
@@ -23,7 +23,7 @@ export default async function AdminTopicsPage() {
       <div className="mb-5 flex flex-col justify-between gap-3 md:flex-row md:items-end">
         <div>
           <h1 className="text-3xl font-extrabold tracking-[-0.04em] text-foreground">Темы</h1>
-          <p className="mt-1 text-sm text-muted">Создавайте темы и наполняйте их вопросами.</p>
+          <p className="mt-1 text-sm text-muted">Создавайте, редактируйте и удаляйте темы квиза.</p>
         </div>
         <Link href="/admin/topics/new" className="btn btn-primary">
           <Plus size={18} />
@@ -47,13 +47,10 @@ export default async function AdminTopicsPage() {
                 <Link href={`/admin/topics/${topic.id}`} className="mt-1 block truncate text-xl font-bold tracking-[-0.03em] text-foreground hover:text-primary">
                   {topic.title}
                 </Link>
-                <p className="mt-0.5 text-xs text-muted">{topic._count.questions} вопросов</p>
+                <p className="mt-0.5 line-clamp-1 text-xs text-muted">{topic.description}</p>
               </div>
             </div>
             <div className="flex gap-2 self-end md:self-auto">
-              <Link className="inline-flex h-9 w-9 items-center justify-center rounded-full text-primary transition hover:bg-primary/10" href={`/topic/${topic.id}`} title="Просмотр" aria-label="Просмотр">
-                <Eye size={18} />
-              </Link>
               <Link className="inline-flex h-9 w-9 items-center justify-center rounded-full text-warning transition hover:bg-warning/10" href={`/admin/topics/${topic.id}`} title="Редактировать" aria-label="Редактировать">
                 <Pencil size={18} />
               </Link>

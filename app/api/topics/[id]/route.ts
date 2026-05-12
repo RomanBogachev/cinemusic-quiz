@@ -28,7 +28,8 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Некорректные данные" }, { status: 400 });
   }
 
-  const topic = await prisma.topicCard.update({ where: { id: params.id }, data: parsed.data });
+  const { quizTypeId: _ignoredQuizTypeId, ...data } = parsed.data;
+  const topic = await prisma.topicCard.update({ where: { id: params.id }, data });
   return NextResponse.json(topic);
 }
 

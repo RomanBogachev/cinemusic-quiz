@@ -1,7 +1,7 @@
 "use client";
 
 import { Minus, Pause, Play, Plus, Square } from "lucide-react";
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { clamp, formatTime } from "@/lib/time";
 
 type VideoRange = {
@@ -41,6 +41,51 @@ const MAX_THUMBNAIL_COUNT = 18;
 function secondsToPercent(seconds: number, duration: number) {
   if (!duration) return 0;
   return clamp((seconds / duration) * 100, 0, 100);
+}
+
+function formatRulerTime(seconds: number) {
+  const safeSeconds = Math.max(0, Math.floor(seconds));
+  const hours = Math.floor(safeSeconds / 3600);
+  const minutes = Math.floor((safeSeconds % 3600) / 60);
+  const remainingSeconds = safeSeconds % 60;
+
+  if (hours > 0) {
+    return `${hours}:${String(minutes).padStart(2, "0")}:${String(remainingSeconds).padStart(2, "0")}`;
+  }
+
+  return `${String(minutes).padStart(2, "0")}:${String(remainingSeconds).padStart(2, "0")}`;
+}
+
+function getRulerLabelStep(duration: number, zoom: number) {
+  if (zoom >= 92 && duration <= 180) return 1;
+  if (zoom >= 54 && duration <= 300) return 2;
+  if (zoom >= 34 && duration <= 900) return 5;
+  if (duration <= 1800) return 10;
+  return 30;
+}
+
+function buildRulerTicks(duration: number, zoom: number) {
+  if (!duration) return [];
+
+  const tickStep = 0.5;
+  const labelStep = getRulerLabelStep(duration, zoom);
+  const tickCount = Math.floor(duration / tickStep);
+  const ticks = Array.from({ length: tickCount + 1 }, (_, index) => {
+    const time = Number((index * tickStep).toFixed(3));
+    const isWholeSecond = Math.abs(time - Math.round(time)) < 0.001;
+    return {
+      time,
+      major: isWholeSecond,
+      label: isWholeSecond && Math.round(time) % labelStep === 0
+    };
+  }).filter((tick) => tick.time <= duration);
+
+  const lastTick = ticks[ticks.length - 1];
+  if (!lastTick || duration - lastTick.time > tickStep * 0.45) {
+    ticks.push({ time: duration, major: true, label: true });
+  }
+
+  return ticks;
 }
 
 function waitForEvent(element: HTMLVideoElement, eventName: "loadedmetadata" | "seeked", signal?: AbortSignal) {
@@ -248,6 +293,7 @@ export function VideoTrimmer({
   const rightPercent = secondsToPercent(end, duration);
   const playheadPercent = secondsToPercent(currentTime, duration);
   const timelineWidth = duration > 0 ? `${Math.max(1000, duration * zoom)}px` : "100%";
+  const rulerTicks = useMemo(() => buildRulerTicks(duration, zoom), [duration, zoom]);
 
   const stopRaf = useCallback(() => {
     if (rafRef.current) {
@@ -556,8 +602,8 @@ export function VideoTrimmer({
           </span>
         </div>
 
-        <div className="relative overflow-x-auto overflow-y-hidden rounded-[20px] border border-white/10 bg-[#17171c]" style={{ overscrollBehaviorX: "contain" }}>
-          <div className="absolute right-3 top-3 z-30 flex items-center gap-1 rounded-full border border-white/12 bg-black/70 p-1 shadow-soft backdrop-blur">
+        <div className="relative overflow-x-auto overflow-y-hidden rounded-[18px] border border-white/10 bg-[#111217]" style={{ overscrollBehaviorX: "contain" }}>
+          <div className="absolute right-2 top-2 z-50 flex items-center gap-1 rounded-full border border-white/12 bg-black/75 p-1 shadow-soft backdrop-blur">
             <button
               type="button"
               className="inline-flex h-8 w-8 items-center justify-center rounded-full text-white transition hover:bg-white/15 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/30"
@@ -577,7 +623,7 @@ export function VideoTrimmer({
           </div>
           <div
             ref={timelineRef}
-            className="relative h-[132px] min-w-full touch-none"
+            className="relative h-[118px] min-w-full touch-none md:h-[128px]"
             style={{ width: timelineWidth }}
             onPointerDown={(event) => {
               startDrag("playhead", event);
@@ -586,12 +632,29 @@ export function VideoTrimmer({
             onPointerUp={finishDrag}
             onPointerCancel={finishDrag}
           >
-            <div className="absolute inset-x-0 top-0 z-10 flex justify-between border-b border-white/10 bg-black/25 px-3 py-1 text-[10px] font-semibold text-white/65">
-              {[0, 0.25, 0.5, 0.75, 1].map((ratio) => (
-                <span key={ratio}>{formatTime((duration || 0) * ratio)}</span>
+            <div className="absolute inset-x-0 top-0 z-10 h-8 border-b border-white/10 bg-black/45">
+              {rulerTicks.map((tick) => (
+                <div
+                  key={`${tick.time}-${tick.major ? "major" : "minor"}`}
+                  className="absolute bottom-0 top-0"
+                  style={{ left: `${secondsToPercent(tick.time, duration)}%` }}
+                >
+                  <span
+                    className={
+                      tick.major
+                        ? "absolute bottom-0 block h-4 border-l border-white/55"
+                        : "absolute bottom-0 block h-2 border-l border-white/22"
+                    }
+                  />
+                  {tick.label && (
+                    <span className="absolute left-1 top-0.5 whitespace-nowrap text-[10px] font-semibold tabular-nums text-white/70">
+                      {formatRulerTime(tick.time)}
+                    </span>
+                  )}
+                </div>
               ))}
             </div>
-            <div className="absolute inset-x-0 bottom-0 top-6 grid" style={{ gridTemplateColumns: `repeat(${Math.max(thumbnails.length, DEFAULT_THUMBNAIL_COUNT)}, minmax(0, 1fr))` }}>
+            <div className="absolute inset-x-0 bottom-3 top-8 grid border-y border-white/10" style={{ gridTemplateColumns: `repeat(${Math.max(thumbnails.length, DEFAULT_THUMBNAIL_COUNT)}, minmax(0, 1fr))` }}>
               {thumbnails.length > 0 ? thumbnails.map((thumbnail, index) => (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img key={`${thumbnail.time}-${index}`} src={thumbnail.url} alt="" className="h-full w-full object-cover opacity-80" />
@@ -604,10 +667,10 @@ export function VideoTrimmer({
               ))}
             </div>
 
-            <div className="absolute bottom-0 left-0 top-6 bg-black/62" style={{ width: `${leftPercent}%` }} />
-            <div className="absolute bottom-0 top-6 bg-black/62" style={{ left: `${rightPercent}%`, right: 0 }} />
+            <div className="absolute bottom-3 left-0 top-8 z-10 bg-black/62" style={{ width: `${leftPercent}%` }} />
+            <div className="absolute bottom-3 top-8 z-10 bg-black/62" style={{ left: `${rightPercent}%`, right: 0 }} />
             <div
-              className="absolute bottom-3 top-9 cursor-grab rounded-[18px] border border-amber-200/90 bg-amber-300/28 shadow-[0_0_28px_rgba(251,191,36,0.32)] active:cursor-grabbing"
+              className="absolute bottom-3 top-8 z-20 cursor-grab rounded-[10px] border-2 border-amber-300 bg-amber-300/10 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.22),0_0_18px_rgba(251,191,36,0.28)] active:cursor-grabbing"
               style={{ left: `${leftPercent}%`, width: `${widthPercent}%` }}
               onPointerDown={(event) => startDrag("range", event)}
               onPointerMove={updateDrag}
@@ -617,28 +680,34 @@ export function VideoTrimmer({
             />
             <button
               type="button"
-              className="absolute top-[calc(50%+12px)] z-20 h-[88px] w-5 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white bg-white shadow-floating outline-none focus-visible:ring-4 focus-visible:ring-primary/40"
+              className="group absolute bottom-3 top-8 z-30 w-10 -translate-x-1/2 cursor-ew-resize bg-transparent outline-none focus-visible:ring-4 focus-visible:ring-amber-200/35"
               style={{ left: `${leftPercent}%` }}
               onPointerDown={(event) => startDrag("start", event)}
               onPointerMove={updateDrag}
               onPointerUp={finishDrag}
               onPointerCancel={finishDrag}
               aria-label="Начало фрагмента"
-            />
+            >
+              <span className="absolute inset-y-0 left-1/2 w-2 -translate-x-1/2 rounded-md border border-amber-100 bg-amber-300 shadow-[0_0_16px_rgba(251,191,36,0.8)] transition group-hover:w-2.5" />
+              <span className="absolute left-1/2 top-1/2 h-7 w-1 -translate-x-1/2 -translate-y-1/2 rounded-full bg-black/35" />
+            </button>
             <button
               type="button"
-              className="absolute top-[calc(50%+12px)] z-20 h-[88px] w-5 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white bg-white shadow-floating outline-none focus-visible:ring-4 focus-visible:ring-primary/40"
+              className="group absolute bottom-3 top-8 z-30 w-10 -translate-x-1/2 cursor-ew-resize bg-transparent outline-none focus-visible:ring-4 focus-visible:ring-amber-200/35"
               style={{ left: `${rightPercent}%` }}
               onPointerDown={(event) => startDrag("end", event)}
               onPointerMove={updateDrag}
               onPointerUp={finishDrag}
               onPointerCancel={finishDrag}
               aria-label="Конец фрагмента"
-            />
-            <div className="absolute bottom-0 top-6 z-10 w-0.5 bg-rose-400 shadow-[0_0_14px_rgba(251,113,133,0.9)]" style={{ left: `${playheadPercent}%` }} />
+            >
+              <span className="absolute inset-y-0 left-1/2 w-2 -translate-x-1/2 rounded-md border border-amber-100 bg-amber-300 shadow-[0_0_16px_rgba(251,191,36,0.8)] transition group-hover:w-2.5" />
+              <span className="absolute left-1/2 top-1/2 h-7 w-1 -translate-x-1/2 -translate-y-1/2 rounded-full bg-black/35" />
+            </button>
+            <div className="absolute inset-y-0 z-40 w-px bg-white shadow-[0_0_10px_rgba(255,255,255,0.9)]" style={{ left: `${playheadPercent}%` }} />
             <button
               type="button"
-              className="absolute bottom-2 z-30 h-5 w-5 -translate-x-1/2 rounded-full border-2 border-white bg-rose-500 shadow-[0_0_18px_rgba(251,113,133,0.85)] transition hover:scale-110 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-rose-300/35"
+              className="absolute bottom-1 z-50 h-5 w-5 -translate-x-1/2 cursor-grab rounded-full border-2 border-white bg-rose-500 shadow-[0_0_16px_rgba(251,113,133,0.85)] transition hover:scale-110 active:cursor-grabbing focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-rose-300/35"
               style={{ left: `${playheadPercent}%` }}
               onPointerDown={(event) => startDrag("playhead", event)}
               onPointerMove={updateDrag}
