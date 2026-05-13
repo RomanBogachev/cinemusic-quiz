@@ -7,8 +7,6 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-cinemusic}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cinemusic_password}
       POSTGRES_DB: ${POSTGRES_DB:-cinemusic_quiz}
-    ports:
-      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - cinemusic_postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -26,19 +24,20 @@ services:
       postgres:
         condition: service_healthy
     ports:
-      - "${APP_PORT:-3000}:3000"
+      - "127.0.0.1:${APP_PORT:-3000}:3000"
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-cinemusic}:${POSTGRES_PASSWORD:-cinemusic_password}@postgres:5432/${POSTGRES_DB:-cinemusic_quiz}?schema=public
       UPLOAD_DIR: /app/uploads
+      PORT: 3000
       ADMIN_SESSION_SECRET: ${ADMIN_SESSION_SECRET:-local-dev-admin-session-secret-change-me}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
       ADMIN_NAME: ${ADMIN_NAME:-}
       NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
     volumes:
-      - quiz_uploads:/app/uploads
+      - cinemusic_uploads:/app/uploads
     restart: unless-stopped
 
 volumes:
-  quiz_uploads:
   cinemusic_postgres_data:
+  cinemusic_uploads:

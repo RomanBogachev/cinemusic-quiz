@@ -1,13 +1,20 @@
-# Cinemusic Quiz
+# cinemusic-quiz
 
-Self-hosted платформа для домашних кино- и музыкальных квизов. Проект рассчитан на запуск на сервере через Docker: приложение Next.js, PostgreSQL, persistent volume для базы и отдельный volume для загруженных медиа.
+Self-hosted платформа для домашних кино- и музыкальных квизов. Проект запускается в Docker: Next.js-приложение, PostgreSQL и persistent volume для загруженных медиа.
 
-## Запуск в Docker
+Подробная server-инструкция: [docs/DEPLOY_DOCKER.md](docs/DEPLOY_DOCKER.md).
+
+## Быстрый запуск в Docker
 
 ### Требования
 
+На сервере нужен только:
+
 - Docker
-- Docker Compose plugin (`docker compose`)
+- Docker Compose plugin
+- внешний Nginx, если нужно публиковать проект в интернет
+
+Nginx и HTTPS не поднимаются внутри Docker в этом проекте.
 
 ### 1. Клонировать проект
 
@@ -20,36 +27,109 @@ cd cinemusic-quiz
 
 ```bash
 cp .env.example .env
+nano .env
 ```
 
-Отредактируйте `.env`:
+Обязательно поменяйте:
 
 - `POSTGRES_PASSWORD`
-- `DATABASE_URL`
 - `ADMIN_SESSION_SECRET`
 - `ADMIN_EMAIL`
 - `ADMIN_PASSWORD`
-- `NEXT_PUBLIC_APP_URL`, если приложение открывается не на `http://localhost:3000`
+- `NEXT_PUBLIC_APP_URL`
 
-Сгенерировать session secret:
+Сгенерировать `ADMIN_SESSION_SECRET`:
 
 ```bash
 openssl rand -base64 48
 ```
 
-Для Docker `DATABASE_URL` должен использовать host `postgres`, например:
+`DATABASE_URL` для Docker не нужно добавлять в `.env`: `docker-compose.yml` собирает его сам и использует внутренний host `postgres`.
 
-```env
-DATABASE_URL=postgresql://cinemusic:cinemusic_password@postgres:5432/cinemusic_quiz?schema=public
-```
-
-### 3. Запустить
+### 3. Запустить контейнеры
 
 ```bash
 docker compose up -d --build
 ```
 
-При старте контейнер приложения безопасно выполняет:
+### 4. Проверить состояние
+
+```bash
+docker compose ps
+docker compose logs -f app
+```
+
+Приложение публикуется только на loopback:
+
+```text
+127.0.0.1:${APP_PORT:-3000}->3000/tcp
+```
+
+PostgreSQL не публикуется наружу и доступен только внутри Docker network.
+
+### 5. Открыть локально
+
+```bash
+curl http://127.0.0.1:3000
+```
+
+В браузере:
+
+```text
+http://localhost:3000
+```
+
+### 6. Настроить внешний Nginx
+
+Пример конфига:
+
+```text
+deploy/nginx/cinemusic-quiz.conf.example
+```
+
+Nginx на host-сервере должен проксировать на:
+
+```text
+http://127.0.0.1:${APP_PORT}
+```
+
+Если `APP_PORT=3000`:
+
+```nginx
+proxy_pass http://127.0.0.1:3000;
+```
+
+HTTPS/Certbot настраиваются на уровне внешнего Nginx.
+
+### 7. Войти в админку
+
+```text
+https://quiz.example.com/admin/login
+```
+
+Для локального запуска:
+
+```text
+http://localhost:3000/admin/login
+```
+
+Первый администратор создаётся из:
+
+- `ADMIN_EMAIL`
+- `ADMIN_PASSWORD`
+- `ADMIN_NAME`
+
+Если администратор уже существует, `npm run admin:init` ничего не перезаписывает. Пароль хранится только как bcrypt hash.
+
+### 8. Остановить
+
+```bash
+docker compose down
+```
+
+Не выполняйте `docker compose down -v`, если не хотите удалить базу и uploads.
+
+## Что запускается в контейнере приложения
 
 ```bash
 npx prisma migrate deploy
@@ -57,134 +137,14 @@ npm run admin:init
 npm run start
 ```
 
-Destructive-команды вроде `prisma migrate reset`, `db push --force-reset` и seed с дефолтными темами при старте не запускаются.
+Production startup не запускает:
 
-### 4. Проверить статус и логи
+- `prisma db seed`;
+- `prisma migrate reset`;
+- `prisma db push --force-reset`;
+- seed-скрипты с дефолтными темами.
 
-```bash
-docker compose ps
-docker compose logs -f app
-docker compose logs -f postgres
-```
-
-### 5. Открыть приложение
-
-```text
-http://localhost:3000
-```
-
-Публичный просмотр квизов доступен только после входа администратора.
-
-### 6. Войти в админку
-
-```text
-http://localhost:3000/admin/login
-```
-
-Первый администратор создаётся одним из двух способов:
-
-1. Через UI: если в базе нет администраторов, `/admin/login` покажет форму создания первого пользователя.
-2. Через Docker startup: если в `.env` заданы `ADMIN_EMAIL` и `ADMIN_PASSWORD`, команда `npm run admin:init` создаст первого администратора. Скрипт idempotent: если администратор уже существует, он ничего не перезаписывает.
-
-Пароль хранится только как bcrypt hash.
-
-### 7. Остановить
-
-```bash
-docker compose down
-```
-
-Не используйте `docker compose down -v`, если не хотите удалить PostgreSQL volume и uploads.
-
-### 8. Обновить проект
-
-```bash
-git pull
-docker compose up -d --build
-```
-
-### 9. Backup базы
-
-```bash
-docker compose exec -T postgres pg_dump -U cinemusic cinemusic_quiz > backup.sql
-```
-
-Если вы поменяли `POSTGRES_USER` или `POSTGRES_DB`, используйте свои значения.
-
-### 10. Восстановление базы
-
-```bash
-cat backup.sql | docker compose exec -T postgres psql -U cinemusic -d cinemusic_quiz
-```
-
-### 11. Полезные команды
-
-```bash
-# Статус контейнеров
-docker compose ps
-
-# Логи приложения
-docker compose logs -f app
-
-# Логи PostgreSQL
-docker compose logs -f postgres
-
-# Перезапуск приложения
-docker compose restart app
-
-# Применить миграции вручную
-docker compose exec app npx prisma migrate deploy
-
-# Prisma validate
-docker compose exec app npx prisma validate
-
-# Зайти в контейнер приложения
-docker compose exec app sh
-
-# Зайти в psql
-docker compose exec postgres psql -U cinemusic -d cinemusic_quiz
-```
-
-## Переменные окружения
-
-Минимальная конфигурация находится в `.env.example`.
-
-Обязательные для production:
-
-- `POSTGRES_USER`
-- `POSTGRES_PASSWORD`
-- `POSTGRES_DB`
-- `DATABASE_URL`
-- `ADMIN_SESSION_SECRET`
-- `NEXT_PUBLIC_APP_URL`
-
-Опциональные для первичной инициализации администратора:
-
-- `ADMIN_EMAIL`
-- `ADMIN_PASSWORD`
-- `ADMIN_NAME`
-
-Пример:
-
-```env
-NODE_ENV=production
-APP_PORT=3000
-NEXT_PUBLIC_APP_URL=http://localhost:3000
-
-POSTGRES_USER=cinemusic
-POSTGRES_PASSWORD=cinemusic_password
-POSTGRES_DB=cinemusic_quiz
-DATABASE_URL=postgresql://cinemusic:cinemusic_password@postgres:5432/cinemusic_quiz?schema=public
-
-ADMIN_SESSION_SECRET=replace-with-a-long-random-secret
-ADMIN_EMAIL=admin@example.com
-ADMIN_PASSWORD=change-me-admin-password
-ADMIN_NAME=Admin
-```
-
-Не коммитьте реальный `.env`.
-
-## Где хранятся данные
+## Данные и volumes
 
 PostgreSQL:
 
@@ -195,7 +155,7 @@ cinemusic_postgres_data -> /var/lib/postgresql/data
 Uploads:
 
 ```text
-quiz_uploads -> /app/uploads
+cinemusic_uploads -> /app/uploads
 ```
 
 Структура uploads:
@@ -207,49 +167,21 @@ quiz_uploads -> /app/uploads
 /app/uploads/covers
 ```
 
-После `docker compose restart app` и `docker compose down && docker compose up -d` данные сохраняются. Данные удаляются только при удалении volumes, например через `docker compose down -v`.
+После `docker compose restart app` и `docker compose down && docker compose up -d` данные сохраняются.
 
-## Админка
-
-Откройте:
-
-```text
-http://localhost:3000/admin/login
-```
-
-В админке можно:
-
-- создавать и редактировать темы;
-- добавлять фото-, видео- и аудио-вопросы;
-- загружать медиафайлы;
-- управлять администраторами и менять пароли.
-
-## Prisma
-
-Схема использует PostgreSQL:
-
-```prisma
-datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-}
-```
-
-Проверка:
+## Backup PostgreSQL
 
 ```bash
-npx prisma validate
+docker compose exec -T postgres pg_dump -U cinemusic cinemusic_quiz > backup.sql
 ```
 
-Применить миграции:
+## Restore PostgreSQL
 
 ```bash
-npx prisma migrate deploy
+cat backup.sql | docker compose exec -T postgres psql -U cinemusic -d cinemusic_quiz
 ```
 
-Seed не запускается при Docker startup. Дефолтные темы не создаются автоматически.
-
-## Проверка проекта локально
+## Проверка проекта
 
 ```bash
 npm run lint
