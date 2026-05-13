@@ -1,77 +1,204 @@
-# Quiz for Friends
+# Cinemusic Quiz
 
-Self-hosted веб-платформа для домашних квизов с друзьями. Открываете сайт на ноутбуке или телевизоре, выбираете формат и тему, показываете медиа-вопросы, а ответ раскрываете вручную.
+Self-hosted платформа для домашних кино- и музыкальных квизов. Проект рассчитан на запуск на сервере через Docker: приложение Next.js, PostgreSQL, persistent volume для базы и отдельный volume для загруженных медиа.
 
-## Быстрый запуск
+## Запуск в Docker
+
+### Требования
+
+- Docker
+- Docker Compose plugin (`docker compose`)
+
+### 1. Клонировать проект
+
+```bash
+git clone https://github.com/RomanBogachev/cinemusic-quiz.git
+cd cinemusic-quiz
+```
+
+### 2. Создать `.env`
 
 ```bash
 cp .env.example .env
+```
+
+Отредактируйте `.env`:
+
+- `POSTGRES_PASSWORD`
+- `DATABASE_URL`
+- `ADMIN_SESSION_SECRET`
+- `ADMIN_EMAIL`
+- `ADMIN_PASSWORD`
+- `NEXT_PUBLIC_APP_URL`, если приложение открывается не на `http://localhost:3000`
+
+Сгенерировать session secret:
+
+```bash
+openssl rand -base64 48
+```
+
+Для Docker `DATABASE_URL` должен использовать host `postgres`, например:
+
+```env
+DATABASE_URL=postgresql://cinemusic:cinemusic_password@postgres:5432/cinemusic_quiz?schema=public
+```
+
+### 3. Запустить
+
+```bash
 docker compose up -d --build
 ```
 
-После запуска сайт доступен на:
+При старте контейнер приложения безопасно выполняет:
+
+```bash
+npx prisma migrate deploy
+npm run admin:init
+npm run start
+```
+
+Destructive-команды вроде `prisma migrate reset`, `db push --force-reset` и seed с дефолтными темами при старте не запускаются.
+
+### 4. Проверить статус и логи
+
+```bash
+docker compose ps
+docker compose logs -f app
+docker compose logs -f postgres
+```
+
+### 5. Открыть приложение
 
 ```text
 http://localhost:3000
 ```
 
-## Переменные окружения
+Публичный просмотр квизов доступен только после входа администратора.
 
-```env
-DATABASE_URL=file:/app/data/quiz.db
-UPLOAD_DIR=/app/uploads
-ADMIN_PASSWORD=change-me
-NEXT_PUBLIC_APP_URL=http://localhost:3000
-```
-
-`ADMIN_PASSWORD` задает пароль для `/admin`.
-
-## Админка
-
-Откройте:
+### 6. Войти в админку
 
 ```text
-http://localhost:3000/admin
+http://localhost:3000/admin/login
 ```
 
-Введите пароль из `ADMIN_PASSWORD`. После входа приложение сохранит httpOnly cookie.
+Первый администратор создаётся одним из двух способов:
 
-## Как добавить карточку
+1. Через UI: если в базе нет администраторов, `/admin/login` покажет форму создания первого пользователя.
+2. Через Docker startup: если в `.env` заданы `ADMIN_EMAIL` и `ADMIN_PASSWORD`, команда `npm run admin:init` создаст первого администратора. Скрипт idempotent: если администратор уже существует, он ничего не перезаписывает.
 
-1. Перейдите в `/admin/topics`.
-2. Нажмите `Новая карточка`.
-3. Выберите тип: фото, музыка или видео.
-4. Укажите название, описание и при необходимости загрузите обложку.
-5. Сохраните карточку.
+Пароль хранится только как bcrypt hash.
 
-## Как добавить фото-вопрос
+### 7. Остановить
 
-1. Откройте нужную карточку в админке.
-2. Нажмите `Добавить вопрос`.
-3. Выберите тип медиа `Фото`.
-4. Загрузите `jpg`, `jpeg`, `png`, `webp` или legacy `gif`.
-5. Укажите правильный ответ и сохраните.
+```bash
+docker compose down
+```
 
-## Как добавить музыкальный вопрос
+Не используйте `docker compose down -v`, если не хотите удалить PostgreSQL volume и uploads.
 
-1. Создайте вопрос с типом медиа `Музыка`.
-2. Загрузите `mp3`, `wav`, `m4a`, `aac`, `ogg`, `flac` или `opus`.
-3. После сохранения откройте вопрос на редактирование и выберите фрагмент во встроенном waveform-редакторе.
-4. Нажмите `Применить настройки`: приложение создаст готовые нарезки 1, 3, 5 и 10 секунд в той же папке uploads.
-5. На странице квиза будут доступны кнопки проигрывания готовых фрагментов.
+### 8. Обновить проект
 
-Пример: `audioStart = 42` даст фрагменты `42-43`, `42-45`, `42-47`, `42-52`.
+```bash
+git pull
+docker compose up -d --build
+```
 
-## Как добавить видео-вопрос
+### 9. Backup базы
 
-1. Создайте вопрос с типом медиа `Видео`.
-2. Загрузите `mp4`.
-3. Укажите `videoStart` и `videoEnd` в секундах.
-4. В режиме квиза кнопка `Играть фрагмент` запустит видео с `videoStart` и остановит на `videoEnd`.
+```bash
+docker compose exec -T postgres pg_dump -U cinemusic cinemusic_quiz > backup.sql
+```
 
-## Где лежат файлы
+Если вы поменяли `POSTGRES_USER` или `POSTGRES_DB`, используйте свои значения.
 
-В Docker файлы хранятся в volume `quiz_uploads`:
+### 10. Восстановление базы
+
+```bash
+cat backup.sql | docker compose exec -T postgres psql -U cinemusic -d cinemusic_quiz
+```
+
+### 11. Полезные команды
+
+```bash
+# Статус контейнеров
+docker compose ps
+
+# Логи приложения
+docker compose logs -f app
+
+# Логи PostgreSQL
+docker compose logs -f postgres
+
+# Перезапуск приложения
+docker compose restart app
+
+# Применить миграции вручную
+docker compose exec app npx prisma migrate deploy
+
+# Prisma validate
+docker compose exec app npx prisma validate
+
+# Зайти в контейнер приложения
+docker compose exec app sh
+
+# Зайти в psql
+docker compose exec postgres psql -U cinemusic -d cinemusic_quiz
+```
+
+## Переменные окружения
+
+Минимальная конфигурация находится в `.env.example`.
+
+Обязательные для production:
+
+- `POSTGRES_USER`
+- `POSTGRES_PASSWORD`
+- `POSTGRES_DB`
+- `DATABASE_URL`
+- `ADMIN_SESSION_SECRET`
+- `NEXT_PUBLIC_APP_URL`
+
+Опциональные для первичной инициализации администратора:
+
+- `ADMIN_EMAIL`
+- `ADMIN_PASSWORD`
+- `ADMIN_NAME`
+
+Пример:
+
+```env
+NODE_ENV=production
+APP_PORT=3000
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+
+POSTGRES_USER=cinemusic
+POSTGRES_PASSWORD=cinemusic_password
+POSTGRES_DB=cinemusic_quiz
+DATABASE_URL=postgresql://cinemusic:cinemusic_password@postgres:5432/cinemusic_quiz?schema=public
+
+ADMIN_SESSION_SECRET=replace-with-a-long-random-secret
+ADMIN_EMAIL=admin@example.com
+ADMIN_PASSWORD=change-me-admin-password
+ADMIN_NAME=Admin
+```
+
+Не коммитьте реальный `.env`.
+
+## Где хранятся данные
+
+PostgreSQL:
+
+```text
+cinemusic_postgres_data -> /var/lib/postgresql/data
+```
+
+Uploads:
+
+```text
+quiz_uploads -> /app/uploads
+```
+
+Структура uploads:
 
 ```text
 /app/uploads/images
@@ -80,57 +207,53 @@ http://localhost:3000/admin
 /app/uploads/covers
 ```
 
-SQLite база хранится в volume `quiz_db`:
+После `docker compose restart app` и `docker compose down && docker compose up -d` данные сохраняются. Данные удаляются только при удалении volumes, например через `docker compose down -v`.
+
+## Админка
+
+Откройте:
 
 ```text
-/app/data/quiz.db
+http://localhost:3000/admin/login
 ```
 
-Файлы доступны приложению по URL вида:
+В админке можно:
 
-```text
-/uploads/audio/example.mp3
-```
-
-## Backup
-
-Сделать архив базы и uploads:
-
-```bash
-docker compose exec quiz sh -c 'tar -czf /tmp/quiz-backup.tar.gz /app/data /app/uploads'
-docker cp quiz-for-friends:/tmp/quiz-backup.tar.gz ./quiz-backup.tar.gz
-```
-
-Восстановление обычно делается обратным копированием архива в контейнер или через временный контейнер с подключенными volumes.
+- создавать и редактировать темы;
+- добавлять фото-, видео- и аудио-вопросы;
+- загружать медиафайлы;
+- управлять администраторами и менять пароли.
 
 ## Prisma
 
-В контейнере при старте выполняется:
+Схема использует PostgreSQL:
 
-```bash
-prisma migrate deploy
-prisma db seed
+```prisma
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
 ```
 
-Seed создает три фиксированных типа категорий и несколько пустых тематических карточек без реальных медиафайлов.
+Проверка:
 
-## API
+```bash
+npx prisma validate
+```
 
-Доступны endpoint'ы:
+Применить миграции:
 
-- `GET /api/categories`
-- `GET /api/topics`
-- `POST /api/topics`
-- `GET /api/topics/:id`
-- `PATCH /api/topics/:id`
-- `DELETE /api/topics/:id`
-- `GET /api/questions?topicId=...`
-- `POST /api/questions`
-- `PATCH /api/questions/:id`
-- `DELETE /api/questions/:id`
-- `POST /api/upload`
-- `POST /api/admin/login`
-- `POST /api/admin/logout`
-- `GET /api/admin/me`
+```bash
+npx prisma migrate deploy
+```
 
-Админские `POST`, `PATCH`, `DELETE` и upload требуют активной admin session.
+Seed не запускается при Docker startup. Дефолтные темы не создаются автоматически.
+
+## Проверка проекта локально
+
+```bash
+npm run lint
+npx tsc --noEmit
+npm run build
+npx prisma validate
+```

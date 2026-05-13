@@ -15,21 +15,26 @@ services:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
-      retries: 10
+      retries: 20
 
-  quiz:
-    build: .
-    container_name: quiz-for-friends
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cinemusic-app
     depends_on:
       postgres:
         condition: service_healthy
     ports:
-      - "3000:3000"
+      - "${APP_PORT:-3000}:3000"
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-cinemusic}:${POSTGRES_PASSWORD:-cinemusic_password}@postgres:5432/${POSTGRES_DB:-cinemusic_quiz}?schema=public
       UPLOAD_DIR: /app/uploads
       ADMIN_SESSION_SECRET: ${ADMIN_SESSION_SECRET:-local-dev-admin-session-secret-change-me}
-      NEXT_PUBLIC_APP_URL: http://localhost:3000
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      ADMIN_NAME: ${ADMIN_NAME:-}
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
     volumes:
       - quiz_uploads:/app/uploads
     restart: unless-stopped
