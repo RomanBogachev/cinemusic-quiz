@@ -28,7 +28,7 @@ services:
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-cinemusic}:${POSTGRES_PASSWORD:-cinemusic_password}@postgres:5432/${POSTGRES_DB:-cinemusic_quiz}?schema=public
       UPLOAD_DIR: /app/uploads
-      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-change-me}
+      ADMIN_SESSION_SECRET: ${ADMIN_SESSION_SECRET:-local-dev-admin-session-secret-change-me}
       NEXT_PUBLIC_APP_URL: http://localhost:3000
     volumes:
       - quiz_uploads:/app/uploads

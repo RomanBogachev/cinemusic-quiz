@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { AuthRequiredCard } from "@/components/AuthRequiredCard";
 import { CinemaBackground } from "@/components/CinemaBackground";
 import { QuestionPlayer } from "@/components/QuestionPlayer";
+import { getCurrentAdminUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import type { QuestionMediaType } from "@/lib/types";
 
@@ -10,6 +12,17 @@ function isQuestionMediaType(value: string): value is QuestionMediaType {
 }
 
 export default async function TopicPage({ params }: { params: { id: string } }) {
+  const adminUser = await getCurrentAdminUser();
+
+  if (!adminUser) {
+    return (
+      <main className="relative min-h-screen overflow-hidden px-5 py-8 text-white md:px-10">
+        <CinemaBackground variant="theater" />
+        <AuthRequiredCard />
+      </main>
+    );
+  }
+
   const topic = await prisma.topicCard.findUnique({
     where: { id: params.id },
     include: {

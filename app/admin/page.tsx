@@ -8,10 +8,11 @@ import { prisma } from "@/lib/prisma";
 
 export default async function AdminPage() {
   if (!isAdminAuthenticated()) {
+    const adminCount = await prisma.adminUser.count();
     return (
       <main className="min-h-screen px-5 py-8">
         <CinemaBackground />
-        <AdminLoginForm />
+        <AdminLoginForm setupMode={adminCount === 0} />
       </main>
     );
   }

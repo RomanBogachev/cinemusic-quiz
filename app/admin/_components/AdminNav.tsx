@@ -38,7 +38,7 @@ const navItems = [
   },
   {
     href: "/admin/profile",
-    label: "Профиль",
+    label: "Администраторы",
     icon: UserRound,
     className: "border-fuchsia-200 bg-fuchsia-500/12 text-fuchsia-700 hover:border-fuchsia-300 hover:bg-fuchsia-500/18 focus-visible:ring-fuchsia-300/35",
     activeClassName: "border-fuchsia-400 bg-fuchsia-600 text-white shadow-[0_10px_28px_rgba(192,38,211,0.22)]"

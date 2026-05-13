@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { AuthRequiredCard } from "@/components/AuthRequiredCard";
 import { CinemaBackground } from "@/components/CinemaBackground";
 import { TopicCard } from "@/components/TopicCard";
+import { getCurrentAdminUser } from "@/lib/auth";
 import { getCategoryMeta, isQuizType } from "@/lib/categories";
 import { prisma } from "@/lib/prisma";
 
@@ -9,6 +11,16 @@ export default async function CategoryPage({ params }: { params: { type: string 
   if (!isQuizType(params.type)) notFound();
   const meta = getCategoryMeta(params.type);
   if (!meta) notFound();
+  const adminUser = await getCurrentAdminUser();
+
+  if (!adminUser) {
+    return (
+      <main className="relative min-h-screen overflow-hidden px-5 py-8 text-white md:px-10">
+        <CinemaBackground variant="theater" />
+        <AuthRequiredCard />
+      </main>
+    );
+  }
 
   const topics = await prisma.topicCard.findMany({
     where: { quizType: { type: params.type } },

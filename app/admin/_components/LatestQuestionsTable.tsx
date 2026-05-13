@@ -34,6 +34,8 @@ type QuestionsTableProps = {
   description?: string;
   limit?: number;
   showHeader?: boolean;
+  topicId?: string;
+  refreshKey?: number;
 };
 
 function MediaPlaceholder({ mediaType }: { mediaType: string }) {
@@ -45,7 +47,7 @@ function MediaPlaceholder({ mediaType }: { mediaType: string }) {
   );
 }
 
-export function QuestionsTable({ title = "Последние добавленные вопросы", description, limit = 10, showHeader = true }: QuestionsTableProps) {
+export function QuestionsTable({ title = "Последние добавленные вопросы", description, limit = 10, showHeader = true, topicId, refreshKey = 0 }: QuestionsTableProps) {
   const [data, setData] = useState<QuestionsResponse | null>(null);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
@@ -56,7 +58,14 @@ export function QuestionsTable({ title = "Последние добавленн�
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`/api/questions?page=${page}&limit=${limit}&sort=createdAt:desc`, { cache: "no-store" });
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: limit.toString(),
+        sort: "createdAt:desc",
+        refresh: refreshKey.toString()
+      });
+      if (topicId) params.set("topicId", topicId);
+      const response = await fetch(`/api/questions?${params.toString()}`, { cache: "no-store" });
       if (!response.ok) throw new Error("Не удалось загрузить вопросы");
       setData((await response.json()) as QuestionsResponse);
     } catch {
@@ -64,11 +73,15 @@ export function QuestionsTable({ title = "Последние добавленн�
     } finally {
       setLoading(false);
     }
-  }, [limit, page]);
+  }, [limit, page, refreshKey, topicId]);
 
   useEffect(() => {
     void loadQuestions();
   }, [loadQuestions]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [topicId]);
 
   async function deleteQuestion(id: string) {
     if (!confirm("Вы уверены, что хотите удалить этот вопрос? Это действие нельзя отменить.")) return;

@@ -6,6 +6,9 @@ import { topicSchema } from "@/lib/validation";
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
+  const authError = requireAdmin();
+  if (authError) return authError;
+
   const type = request.nextUrl.searchParams.get("type");
   const where = type ? { quizType: { type } } : {};
   const topics = await prisma.topicCard.findMany({

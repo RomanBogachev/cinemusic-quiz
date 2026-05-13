@@ -9,6 +9,9 @@ import { trimVideoSegment } from "@/lib/videoProcessing";
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
+  const authError = requireAdmin();
+  if (authError) return authError;
+
   const topicId = request.nextUrl.searchParams.get("topicId");
   const pageParam = request.nextUrl.searchParams.get("page");
   const limitParam = request.nextUrl.searchParams.get("limit");

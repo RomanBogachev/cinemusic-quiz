@@ -1,6 +1,6 @@
 "use client";
 
-import { Minus, Pause, Play, Plus, Save, Square } from "lucide-react";
+import { Pause, Play, Save, Square } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import WaveSurfer from "wavesurfer.js";
 import RegionsPlugin from "wavesurfer.js/dist/plugins/regions.esm.js";
@@ -63,6 +63,61 @@ function formatTime(value: number) {
   return milliseconds > 0 ? `${base}.${milliseconds.toString().padStart(3, "0")}` : base;
 }
 
+function formatRulerTime(value: number) {
+  const safeValue = Math.max(0, Math.floor(value));
+  const hours = Math.floor(safeValue / 3600);
+  const minutes = Math.floor((safeValue % 3600) / 60);
+  const seconds = safeValue % 60;
+
+  if (hours > 0) {
+    return `${hours}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+  }
+
+  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+}
+
+function getRulerTickStep(duration: number, width: number) {
+  const pixelsPerSecond = width > 0 && duration > 0 ? width / duration : 0;
+  if (pixelsPerSecond >= 16) return 0.5;
+  if (pixelsPerSecond >= 8) return 1;
+  if (pixelsPerSecond >= 4) return 2;
+  if (pixelsPerSecond >= 2) return 5;
+  return 10;
+}
+
+function getRulerLabelStep(duration: number, width: number) {
+  const pixelsPerSecond = width > 0 && duration > 0 ? width / duration : 0;
+  if (pixelsPerSecond >= 70 && duration <= 180) return 1;
+  if (pixelsPerSecond >= 34 && duration <= 300) return 2;
+  if (pixelsPerSecond >= 14 && duration <= 900) return 5;
+  if (duration <= 1800) return 10;
+  return 30;
+}
+
+function buildRulerTicks(duration: number, width: number) {
+  if (!duration) return [];
+
+  const tickStep = getRulerTickStep(duration, width);
+  const labelStep = getRulerLabelStep(duration, width);
+  const tickCount = Math.floor(duration / tickStep);
+  const ticks = Array.from({ length: tickCount + 1 }, (_, index) => {
+    const time = Number((index * tickStep).toFixed(3));
+    const isWholeSecond = Math.abs(time - Math.round(time)) < 0.001;
+    return {
+      time,
+      major: isWholeSecond,
+      label: isWholeSecond && Math.round(time) % labelStep === 0
+    };
+  }).filter((tick) => tick.time <= duration);
+
+  const lastTick = ticks[ticks.length - 1];
+  if (!lastTick || duration - lastTick.time > tickStep * 0.45) {
+    ticks.push({ time: duration, major: true, label: true });
+  }
+
+  return ticks;
+}
+
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
@@ -87,6 +142,7 @@ export function AudioWaveformEditor({
 }: AudioWaveformEditorProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const timelineViewportRef = useRef<HTMLDivElement>(null);
   const timelineRef = useRef<HTMLDivElement>(null);
   const waveRef = useRef<WaveSurfer | null>(null);
   const regionRef = useRef<RegionLike | null>(null);
@@ -100,33 +156,44 @@ export function AudioWaveformEditor({
   const durationRef = useRef(0);
   const currentTimeRef = useRef(0);
   const hasSelectedSegmentRef = useRef(initialEnd !== null);
-  const pendingAnchorStartRef = useRef<number | null>(null);
 
   const [duration, setDuration] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
   const [start, setStart] = useState(initialStart ?? 0);
   const [end, setEnd] = useState((initialStart ?? 0) + 1);
-  const [zoom, setZoom] = useState(48);
   const [playing, setPlaying] = useState(false);
   const [saving, setSaving] = useState(false);
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const zoomRef = useRef(zoom);
+  const [timelineViewportWidth, setTimelineViewportWidth] = useState(0);
 
   const selectedDuration = useMemo(() => Math.max(0, end - start), [end, start]);
   const activeDuration = segmentDurations.find((durationOption) => Math.abs(durationOption.value - selectedDuration) < 0.05)?.value ?? null;
   const playheadPercent = duration > 0 ? clamp((currentTime / duration) * 100, 0, 100) : 0;
   const segmentStartPercent = duration > 0 ? clamp((start / duration) * 100, 0, 100) : 0;
   const segmentWidthPercent = duration > 0 ? clamp((selectedDuration / duration) * 100, 0, 100) : 0;
-  const timelineWidth = duration > 0 && zoom > 0 ? `${Math.max(1000, duration * zoom)}px` : "100%";
+  const rulerWidth = Math.max(0, timelineViewportWidth - timelinePadding * 2);
+  const rulerTicks = useMemo(() => buildRulerTicks(duration, rulerWidth), [duration, rulerWidth]);
 
   useEffect(() => {
     onRangeChangeRef.current = onRangeChange;
   }, [onRangeChange]);
 
+  useEffect(() => {
+    const element = timelineViewportRef.current;
+    if (!element) return;
+
+    const updateWidth = () => {
+      setTimelineViewportWidth(element.clientWidth);
+    };
+    updateWidth();
+    const observer = new ResizeObserver(updateWidth);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+
   initialStartRef.current = initialStart ?? 0;
   initialEndRef.current = initialEnd;
-  zoomRef.current = zoom;
 
   const syncRange = useCallback((nextStart: number, nextEnd: number, syncRegion = true) => {
     const nextRange = { start: nextStart, end: nextEnd };
@@ -140,16 +207,13 @@ export function AudioWaveformEditor({
     }
   }, []);
 
-  const seekPlayhead = useCallback((time: number, options?: { setPendingAnchor?: boolean }) => {
+  const seekPlayhead = useCallback((time: number) => {
     const safeDuration = durationRef.current;
     const safeTime = clamp(time, 0, Math.max(0, safeDuration));
     const wave = waveRef.current;
     currentTimeRef.current = safeTime;
     setCurrentTime(safeTime);
     setError(null);
-    if (options?.setPendingAnchor) {
-      pendingAnchorStartRef.current = safeTime;
-    }
     if (!wave) return;
     wave.pause();
     wave.setTime(safeTime);
@@ -222,13 +286,12 @@ export function AudioWaveformEditor({
       waveColor: "#10b981",
       progressColor: "#14b8a6",
       cursorColor: "#f43f5e",
-      cursorWidth: 3,
+      cursorWidth: 1,
       barWidth: 3,
       barGap: 2,
       barRadius: 4,
       normalize: true,
       interact: true,
-      minPxPerSec: zoomRef.current,
       plugins: [regions]
     });
 
@@ -247,7 +310,6 @@ export function AudioWaveformEditor({
       setCurrentTime(safeStart);
       wave.setTime(safeStart);
       hasSelectedSegmentRef.current = initialEndRef.current !== null;
-      pendingAnchorStartRef.current = null;
 
       regionRef.current = regions.addRegion({
         start: safeStart,
@@ -257,11 +319,11 @@ export function AudioWaveformEditor({
         resize: true
       });
       syncRange(safeStart, safeEnd, false);
-      wave.zoom(zoomRef.current);
     });
 
     wave.on("play", () => setPlaying(true));
     wave.on("pause", () => setPlaying(false));
+    wave.on("finish", () => setPlaying(false));
     wave.on("timeupdate", (time) => {
       currentTimeRef.current = time;
       setCurrentTime(time);
@@ -276,7 +338,6 @@ export function AudioWaveformEditor({
       const nextStart = clamp(region.start, 0, Math.max(0, durationRef.current - minSegmentDuration));
       const nextEnd = clamp(region.end, nextStart + minSegmentDuration, durationRef.current || region.end);
       hasSelectedSegmentRef.current = true;
-      pendingAnchorStartRef.current = null;
       syncRange(nextStart, nextEnd, false);
       setError(null);
     });
@@ -290,21 +351,26 @@ export function AudioWaveformEditor({
     };
   }, [src, syncRange, stopSegmentPlaybackMonitor]);
 
-  function setWaveZoom(nextZoom: number) {
-    const value = clamp(nextZoom, 24, 180);
-    setZoom(value);
-    waveRef.current?.zoom(value);
-  }
-
-  function playPause() {
+  async function playPause() {
     const wave = waveRef.current;
     if (!wave) return;
     setError(null);
     stopSegmentPlaybackMonitor();
-    if (!playing) {
-      wave.setTime(currentTimeRef.current);
+
+    if (wave.isPlaying()) {
+      wave.pause();
+      setPlaying(false);
+      return;
     }
-    void wave.playPause();
+
+    wave.setTime(currentTimeRef.current);
+    try {
+      await wave.play();
+      setPlaying(true);
+    } catch {
+      setPlaying(false);
+      setError("Браузер не смог запустить воспроизведение.");
+    }
   }
 
   function handleEditorKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
@@ -312,7 +378,7 @@ export function AudioWaveformEditor({
     if (event.repeat || !ready || isEditableTarget(event.target)) return;
 
     event.preventDefault();
-    playPause();
+    void playPause();
   }
 
   function handleEditorPointerDownCapture(event: React.PointerEvent<HTMLDivElement>) {
@@ -334,7 +400,7 @@ export function AudioWaveformEditor({
   async function chooseSegment(segmentDuration: number) {
     if (!ready || durationRef.current <= 0) return;
     const fileDuration = durationRef.current;
-    const anchorStart = pendingAnchorStartRef.current ?? (hasSelectedSegmentRef.current ? startRef.current : currentTimeRef.current);
+    const anchorStart = hasSelectedSegmentRef.current ? startRef.current : currentTimeRef.current;
     const nextStart = clamp(anchorStart, 0, Math.max(0, fileDuration - minSegmentDuration));
     const nextEnd = clamp(nextStart + segmentDuration, nextStart + minSegmentDuration, fileDuration);
 
@@ -345,9 +411,17 @@ export function AudioWaveformEditor({
 
     setError(null);
     hasSelectedSegmentRef.current = true;
-    pendingAnchorStartRef.current = null;
     syncRange(nextStart, nextEnd);
     await playSegment(nextStart, nextEnd);
+  }
+
+  function nudgePlayhead(delta: number) {
+    const wave = waveRef.current;
+    if (!ready || durationRef.current <= 0) return;
+    stopSegmentPlaybackMonitor();
+    wave?.pause();
+    setPlaying(false);
+    seekPlayhead(currentTimeRef.current + delta);
   }
 
   function handlePlayheadPointerDown(event: React.PointerEvent<HTMLButtonElement>) {
@@ -369,7 +443,7 @@ export function AudioWaveformEditor({
     const trackWidth = Math.max(1, rect.width - timelinePadding * 2);
     const x = clamp(clientX - trackLeft, 0, trackWidth);
     const nextTime = (x / trackWidth) * durationRef.current;
-    seekPlayhead(nextTime, { setPendingAnchor: true });
+    seekPlayhead(nextTime);
   }
 
   function secondsFromPointer(clientX: number) {
@@ -400,7 +474,6 @@ export function AudioWaveformEditor({
     waveRef.current?.pause();
     setPlaying(false);
     hasSelectedSegmentRef.current = true;
-    pendingAnchorStartRef.current = null;
     segmentDragRef.current = {
       mode,
       pointerStart: secondsFromPointer(event.clientX),
@@ -499,41 +572,38 @@ export function AudioWaveformEditor({
       </div>
 
       <div className="relative max-w-full overflow-hidden rounded-2xl border border-emerald-300/20 bg-slate-900">
-        <div className="absolute right-3 top-3 z-20 flex items-center gap-1 rounded-full border border-white/10 bg-slate-950/88 p-1 shadow-lg backdrop-blur">
-          <button
-            type="button"
-            className="inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-100 transition hover:bg-emerald-400/15 hover:text-emerald-200 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-300/25"
-            aria-label="Уменьшить масштаб timeline"
-            onClick={() => setWaveZoom(zoom - 24)}
-          >
-            <Minus size={16} />
-          </button>
-          <button
-            type="button"
-            className="inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-100 transition hover:bg-emerald-400/15 hover:text-emerald-200 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-300/25"
-            aria-label="Увеличить масштаб timeline"
-            onClick={() => setWaveZoom(zoom + 24)}
-          >
-            <Plus size={16} />
-          </button>
-        </div>
-
         {!ready && (
           <div className="pointer-events-none absolute inset-x-4 top-1/2 z-20 -translate-y-1/2 rounded-2xl border border-emerald-300/20 bg-slate-950/88 px-4 py-3 text-center text-sm font-semibold text-slate-200 shadow-lg backdrop-blur">
             Загружаем waveform...
           </div>
         )}
 
-        <div className="overflow-x-auto overflow-y-hidden" style={{ overscrollBehaviorX: "contain" }}>
+        <div ref={timelineViewportRef} className="overflow-hidden">
           <div
             ref={timelineRef}
             className="relative min-w-full cursor-crosshair px-4 pb-8 pt-12"
-            style={{ width: timelineWidth }}
             onClick={handleTimelineClick}
           >
-            <div className="pointer-events-none absolute inset-x-4 top-4 flex justify-between border-t border-emerald-300/15 pt-1 text-[10px] font-semibold text-emerald-100/70">
-              {[0, 0.25, 0.5, 0.75, 1].map((ratio) => (
-                <span key={ratio}>{formatTime((duration || 0) * ratio)}</span>
+            <div className="pointer-events-none absolute inset-x-4 top-3 h-8 border-t border-emerald-300/15">
+              {rulerTicks.map((tick) => (
+                <div
+                  key={`${tick.time}-${tick.major ? "major" : "minor"}`}
+                  className="absolute bottom-0 top-0"
+                  style={{ left: `${duration > 0 ? (tick.time / duration) * 100 : 0}%` }}
+                >
+                  <span
+                    className={
+                      tick.major
+                        ? "absolute bottom-0 block h-5 border-l border-emerald-100/65"
+                        : "absolute bottom-0 block h-2.5 border-l border-emerald-100/28"
+                    }
+                  />
+                  {tick.label && (
+                    <span className="absolute left-1 top-0 whitespace-nowrap text-[10px] font-semibold tabular-nums text-emerald-100/70">
+                      {formatRulerTime(tick.time)}
+                    </span>
+                  )}
+                </div>
               ))}
             </div>
             <div ref={containerRef} className="relative z-10 overflow-hidden rounded-xl border border-emerald-300/15 bg-gradient-to-b from-emerald-950/70 to-slate-950" />
@@ -555,36 +625,38 @@ export function AudioWaveformEditor({
             <button
               type="button"
               aria-label="Изменить начало фрагмента"
-              className="absolute bottom-7 top-11 z-30 w-6 -translate-x-1/2 cursor-ew-resize rounded-full border border-white bg-amber-100 shadow-[0_0_18px_rgba(251,191,36,0.65)] transition hover:scale-105 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-amber-200/35"
+              className="group absolute bottom-7 top-11 z-30 w-5 -translate-x-1/2 cursor-ew-resize bg-transparent focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-amber-200/35"
               style={{ left: `calc(1rem + (100% - 2rem) * ${segmentStartPercent / 100})` }}
               onPointerDown={(event) => handleSegmentPointerDown("start", event)}
               onPointerMove={handleSegmentPointerMove}
               onPointerUp={handleSegmentPointerUp}
               onPointerCancel={handleSegmentPointerUp}
             >
-              <span className="absolute left-1/2 top-1/2 h-8 w-1 -translate-x-1/2 -translate-y-1/2 rounded-full bg-amber-500" />
+              <span className="absolute inset-y-0 left-1/2 w-[3px] -translate-x-1/2 rounded-full bg-amber-200 shadow-[0_0_10px_rgba(251,191,36,0.58)] transition group-hover:w-1" />
+              <span className="absolute -top-1 left-1/2 h-2 w-3 -translate-x-1/2 rounded-sm bg-amber-300 shadow-[0_0_8px_rgba(251,191,36,0.45)]" />
             </button>
             <button
               type="button"
               aria-label="Изменить конец фрагмента"
-              className="absolute bottom-7 top-11 z-30 w-6 -translate-x-1/2 cursor-ew-resize rounded-full border border-white bg-amber-100 shadow-[0_0_18px_rgba(251,191,36,0.65)] transition hover:scale-105 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-amber-200/35"
+              className="group absolute bottom-7 top-11 z-30 w-5 -translate-x-1/2 cursor-ew-resize bg-transparent focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-amber-200/35"
               style={{ left: `calc(1rem + (100% - 2rem) * ${(segmentStartPercent + segmentWidthPercent) / 100})` }}
               onPointerDown={(event) => handleSegmentPointerDown("end", event)}
               onPointerMove={handleSegmentPointerMove}
               onPointerUp={handleSegmentPointerUp}
               onPointerCancel={handleSegmentPointerUp}
             >
-              <span className="absolute left-1/2 top-1/2 h-8 w-1 -translate-x-1/2 -translate-y-1/2 rounded-full bg-amber-500" />
+              <span className="absolute inset-y-0 left-1/2 w-[3px] -translate-x-1/2 rounded-full bg-amber-200 shadow-[0_0_10px_rgba(251,191,36,0.58)] transition group-hover:w-1" />
+              <span className="absolute -top-1 left-1/2 h-2 w-3 -translate-x-1/2 rounded-sm bg-amber-300 shadow-[0_0_8px_rgba(251,191,36,0.45)]" />
             </button>
             <div
-              className="pointer-events-none absolute bottom-5 top-12 z-40 w-0.5 rounded-full bg-rose-400 shadow-[0_0_18px_rgba(244,63,94,0.75)]"
+              className="pointer-events-none absolute bottom-5 top-12 z-40 w-px rounded-full bg-rose-400 shadow-[0_0_14px_rgba(244,63,94,0.72)]"
               style={{ left: `calc(1rem + (100% - 2rem) * ${playheadPercent / 100})` }}
             />
             <button
               type="button"
               data-playhead-handle
               aria-label="Переместить playhead"
-              className="absolute bottom-3 z-30 h-5 w-5 -translate-x-1/2 rounded-full border-2 border-white bg-rose-500 shadow-[0_0_18px_rgba(244,63,94,0.8)] transition hover:scale-110 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-rose-300/35"
+              className="absolute bottom-4 z-50 h-4 w-4 -translate-x-1/2 rounded-full border border-white bg-rose-500 shadow-[0_0_12px_rgba(244,63,94,0.72)] transition hover:scale-110 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-rose-300/35"
               style={{ left: `calc(1rem + (100% - 2rem) * ${playheadPercent / 100})` }}
               onPointerDown={handlePlayheadPointerDown}
               onPointerMove={handlePlayheadPointerMove}
@@ -603,7 +675,7 @@ export function AudioWaveformEditor({
           <button
             type="button"
             className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-white/80 bg-white/95 px-4 py-2 text-sm font-extrabold text-slate-950 shadow-[0_10px_28px_rgba(255,255,255,0.12)] transition hover:-translate-y-0.5 hover:bg-white focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-white/35 active:translate-y-0 disabled:cursor-not-allowed disabled:border-white/20 disabled:bg-white/20 disabled:text-slate-500"
-            onClick={playPause}
+            onClick={() => void playPause()}
             disabled={!ready}
           >
             {playing ? <Pause size={18} /> : <Play size={18} />}
@@ -618,6 +690,27 @@ export function AudioWaveformEditor({
             <Square size={18} />
             Stop
           </button>
+          <button
+            type="button"
+            className="inline-flex min-h-11 items-center justify-center rounded-full border border-cyan-200/70 bg-cyan-50 px-3.5 py-2 text-sm font-extrabold text-cyan-950 shadow-[0_10px_24px_rgba(103,232,249,0.14)] transition hover:-translate-y-0.5 hover:bg-white focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-cyan-200/45 active:translate-y-0 disabled:cursor-not-allowed disabled:border-white/20 disabled:bg-white/20 disabled:text-slate-500"
+            onClick={() => nudgePlayhead(-0.5)}
+            disabled={!ready}
+            aria-label="Сдвинуть playhead на 0.5 секунды назад"
+          >
+            -0.5 сек
+          </button>
+          <button
+            type="button"
+            className="inline-flex min-h-11 items-center justify-center rounded-full border border-cyan-200/70 bg-cyan-50 px-3.5 py-2 text-sm font-extrabold text-cyan-950 shadow-[0_10px_24px_rgba(103,232,249,0.14)] transition hover:-translate-y-0.5 hover:bg-white focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-cyan-200/45 active:translate-y-0 disabled:cursor-not-allowed disabled:border-white/20 disabled:bg-white/20 disabled:text-slate-500"
+            onClick={() => nudgePlayhead(0.5)}
+            disabled={!ready}
+            aria-label="Сдвинуть playhead на 0.5 секунды вперёд"
+          >
+            +0.5 сек
+          </button>
+          <div className="ml-auto rounded-xl border border-cyan-300/25 bg-cyan-300/10 px-3 py-2 text-xs font-semibold text-cyan-100">
+            Текущий момент: {formatTime(currentTime)}
+          </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] p-2">

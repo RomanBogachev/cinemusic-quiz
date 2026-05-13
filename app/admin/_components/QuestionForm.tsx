@@ -1,6 +1,6 @@
 "use client";
 
-import type { Question, QuizType, TopicCard } from "@prisma/client";
+import type { Question } from "@prisma/client";
 import { Save } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -11,21 +11,32 @@ import { getCategoryBadgeClassName, getCategoryCardClassName, getCategoryDisplay
 import { getMediaTypeDescription, getMediaTypeFromQuizType, MEDIA_TYPE_LABELS } from "@/lib/mediaTypes";
 import type { QuestionMediaType } from "@/lib/types";
 
-type TopicWithQuizType = TopicCard & { quizType: QuizType };
+type TopicWithQuizType = {
+  id: string;
+  title: string;
+  description: string;
+  quizTypeId: string;
+  quizType: {
+    id?: string;
+    type: string;
+    name?: string;
+  };
+};
 
 type QuestionFormProps = {
   topics: TopicWithQuizType[];
   question?: Question;
   initialTopicId?: string;
+  lockedTopicId?: string;
+  onSaved?: (payload: { id?: string; topicCardId?: string }) => void;
 };
 
-export function QuestionForm({ topics, question, initialTopicId }: QuestionFormProps) {
+export function QuestionForm({ topics, question, initialTopicId, lockedTopicId, onSaved }: QuestionFormProps) {
   const router = useRouter();
-  const [topicCardId, setTopicCardId] = useState(question?.topicCardId ?? initialTopicId ?? topics[0]?.id ?? "");
+  const [topicCardId, setTopicCardId] = useState(lockedTopicId ?? question?.topicCardId ?? initialTopicId ?? topics[0]?.id ?? "");
   const selectedTopic = useMemo(() => topics.find((topic) => topic.id === topicCardId), [topics, topicCardId]);
   const expectedMediaType = selectedTopic ? getMediaTypeFromQuizType(selectedTopic.quizType.type) : "image";
   const [mediaType, setMediaType] = useState<QuestionMediaType>((question?.mediaType as QuestionMediaType | undefined) ?? expectedMediaType);
-  const [title] = useState(question?.title ?? "");
   const [answer, setAnswer] = useState(question?.answer ?? "");
   const [mediaFilePath, setMediaFilePath] = useState(question?.mediaFilePath ?? "");
   const [audioStart, setAudioStart] = useState(question?.audioStart?.toString() ?? "0");
@@ -78,7 +89,7 @@ export function QuestionForm({ topics, question, initialTopicId }: QuestionFormP
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         topicCardId,
-        title: title || null,
+        title: question?.title ?? null,
         answer,
         mediaType,
         mediaFilePath,
@@ -95,6 +106,10 @@ export function QuestionForm({ topics, question, initialTopicId }: QuestionFormP
       setError(payload.error ?? "Не удалось сохранить");
       return;
     }
+    if (onSaved) {
+      onSaved(payload);
+      return;
+    }
     router.push(`/admin/topics/${payload.topicCardId ?? topicCardId}`);
     router.refresh();
   }
@@ -104,25 +119,35 @@ export function QuestionForm({ topics, question, initialTopicId }: QuestionFormP
       <div className="grid min-w-0 gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(300px,400px)]">
         <div className="grid min-w-0 content-start gap-4">
           <div className="grid gap-4 lg:grid-cols-2">
-            <label>
-              <span className="mb-1.5 block text-xs font-semibold text-muted">Тема</span>
-              <select
-                className="input text-sm"
-                value={topicCardId}
-                onChange={(event) => {
-                  const nextTopicId = event.target.value;
-                  setTopicCardId(nextTopicId);
-                  const nextTopic = topics.find((topic) => topic.id === nextTopicId);
-                  if (nextTopic) setMediaType(getMediaTypeFromQuizType(nextTopic.quizType.type));
-                }}
-              >
-                {topics.map((topic) => (
-                  <option key={topic.id} value={topic.id}>
-                    {topic.title}
-                  </option>
-                ))}
-              </select>
-            </label>
+            {lockedTopicId && selectedTopic ? (
+              <div>
+                <span className="mb-1.5 block text-xs font-semibold text-muted">Выбранная тема</span>
+                <div className={`rounded-[18px] border p-3 ${getCategoryCardClassName(selectedTopic.quizType.type)}`}>
+                  <div className="text-sm font-bold text-foreground">{selectedTopic.title}</div>
+                  <p className="mt-1 line-clamp-2 text-xs leading-5 text-muted">{selectedTopic.description}</p>
+                </div>
+              </div>
+            ) : (
+              <label>
+                <span className="mb-1.5 block text-xs font-semibold text-muted">Тема</span>
+                <select
+                  className="input text-sm"
+                  value={topicCardId}
+                  onChange={(event) => {
+                    const nextTopicId = event.target.value;
+                    setTopicCardId(nextTopicId);
+                    const nextTopic = topics.find((topic) => topic.id === nextTopicId);
+                    if (nextTopic) setMediaType(getMediaTypeFromQuizType(nextTopic.quizType.type));
+                  }}
+                >
+                  {topics.map((topic) => (
+                    <option key={topic.id} value={topic.id}>
+                      {topic.title}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
             <div>
               <span className="mb-1.5 block text-xs font-semibold text-muted">Тип медиа</span>
               <div className={`rounded-[18px] border p-3 ${selectedTopic ? getCategoryCardClassName(selectedTopic.quizType.type) : "border-black/[0.06] bg-primary/[0.06]"}`}>

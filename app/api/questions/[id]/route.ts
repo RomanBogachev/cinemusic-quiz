@@ -9,6 +9,9 @@ import { trimVideoSegment } from "@/lib/videoProcessing";
 export const dynamic = "force-dynamic";
 
 export async function GET(_request: NextRequest, { params }: { params: { id: string } }) {
+  const authError = requireAdmin();
+  if (authError) return authError;
+
   const question = await prisma.question.findUnique({ where: { id: params.id }, include: { topicCard: true } });
   if (!question) {
     return NextResponse.json({ error: "Вопрос не найден" }, { status: 404 });
