@@ -175,7 +175,28 @@ docker run --rm \
   alpine tar czf /backup/uploads-backup.tar.gz -C /data .
 ```
 
-## 13. Важное предупреждение
+## 13. Проверить отдачу uploads через Nginx
+
+Если host Nginx отдаёт `/uploads/` напрямую из Docker volume, проверьте права и HTTP-доступ:
+
+```bash
+sudo ./scripts/check-upload-permissions.sh \
+  --volume cinemusic-quiz_cinemusic_uploads \
+  --domain https://quiz.example.com
+```
+
+Исправить права можно только явно:
+
+```bash
+sudo ./scripts/check-upload-permissions.sh \
+  --volume cinemusic-quiz_cinemusic_uploads \
+  --domain https://quiz.example.com \
+  --fix
+```
+
+Подробнее: [UPLOADS_NGINX.md](UPLOADS_NGINX.md).
+
+## 14. Важное предупреждение
 
 Не выполняйте:
 
