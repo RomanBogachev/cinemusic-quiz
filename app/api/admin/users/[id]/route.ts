@@ -45,6 +45,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     data,
     select: {
       id: true,
+      username: true,
       email: true,
       name: true,
       isActive: true,

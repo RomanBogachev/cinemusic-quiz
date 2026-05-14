@@ -8,7 +8,8 @@ const SESSION_MAX_AGE = 60 * 60 * 24 * 14;
 
 type AdminSessionPayload = {
   userId: string;
-  email: string;
+  username?: string;
+  email?: string;
   exp: number;
 };
 
@@ -44,7 +45,7 @@ function parseSessionToken(token?: string): AdminSessionPayload | null {
 
   try {
     const parsed = JSON.parse(decodeBase64Url(payload)) as AdminSessionPayload;
-    if (!parsed.userId || !parsed.email || !parsed.exp || parsed.exp < Math.floor(Date.now() / 1000)) {
+    if (!parsed.userId || !parsed.exp || parsed.exp < Math.floor(Date.now() / 1000)) {
       return null;
     }
     return parsed;
@@ -65,6 +66,7 @@ export async function getCurrentAdminUser() {
     where: { id: session.userId },
     select: {
       id: true,
+      username: true,
       email: true,
       name: true,
       isActive: true
@@ -78,11 +80,11 @@ export function isAdminAuthenticated() {
   return Boolean(getAdminSession());
 }
 
-export function setAdminCookie(response: NextResponse, user: { id: string; email: string }) {
+export function setAdminCookie(response: NextResponse, user: { id: string; username: string }) {
   const payload = encodeBase64Url(
     JSON.stringify({
       userId: user.id,
-      email: user.email,
+      username: user.username,
       exp: Math.floor(Date.now() / 1000) + SESSION_MAX_AGE
     } satisfies AdminSessionPayload)
   );

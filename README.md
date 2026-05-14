@@ -34,7 +34,7 @@ nano .env
 
 - `POSTGRES_PASSWORD`
 - `ADMIN_SESSION_SECRET`
-- `ADMIN_EMAIL`
+- `ADMIN_USERNAME`
 - `ADMIN_PASSWORD`
 - `NEXT_PUBLIC_APP_URL`
 
@@ -115,9 +115,10 @@ http://localhost:3000/admin/login
 
 Первый администратор создаётся из:
 
-- `ADMIN_EMAIL`
+- `ADMIN_USERNAME`
 - `ADMIN_PASSWORD`
-- `ADMIN_NAME`
+- `ADMIN_EMAIL` (необязательно)
+- `ADMIN_NAME` (необязательно)
 
 Если администратор уже существует, `npm run admin:init` ничего не перезаписывает. Пароль хранится только как bcrypt hash.
 

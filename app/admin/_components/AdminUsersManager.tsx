@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 
 type AdminUserRow = {
   id: string;
-  email: string;
+  username: string;
+  email: string | null;
   name: string | null;
   isActive: boolean;
   createdAt: string;
@@ -19,9 +20,11 @@ type UsersPayload = {
 export function AdminUsersManager() {
   const [users, setUsers] = useState<AdminUserRow[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
+  const [passwordConfirm, setPasswordConfirm] = useState("");
   const [passwordByUser, setPasswordByUser] = useState<Record<string, string>>({});
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -47,7 +50,7 @@ export function AdminUsersManager() {
     const response = await fetch("/api/admin/users", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ email, name, password })
+      body: JSON.stringify({ username, email, name, password, passwordConfirm })
     });
     setLoading(false);
     if (!response.ok) {
@@ -55,9 +58,11 @@ export function AdminUsersManager() {
       setError(payload.error ?? "Не удалось создать пользователя");
       return;
     }
+    setUsername("");
     setEmail("");
     setName("");
     setPassword("");
+    setPasswordConfirm("");
     setMessage("Администратор создан");
     await loadUsers();
   }
@@ -98,8 +103,9 @@ export function AdminUsersManager() {
               {users.map((user) => (
                 <tr key={user.id}>
                   <td className="px-4 py-3">
-                    <div className="font-semibold text-foreground">{user.name || "Без имени"}</div>
-                    <div className="text-xs text-muted">{user.email}</div>
+                    <div className="font-semibold text-foreground">{user.username}</div>
+                    <div className="text-xs text-muted">{user.name || "Без имени"}</div>
+                    {user.email && <div className="text-xs text-muted">{user.email}</div>}
                   </td>
                   <td className="px-4 py-3">
                     <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${user.isActive ? "bg-emerald-500/15 text-emerald-700" : "bg-rose-500/15 text-rose-700"}`}>
@@ -146,8 +152,12 @@ export function AdminUsersManager() {
       <form onSubmit={createUser} className="apple-card p-5 md:p-6">
         <h2 className="text-2xl font-extrabold tracking-[-0.03em] text-foreground">Добавить администратора</h2>
         <label className="mt-4 block">
-          <span className="mb-2 block text-sm font-semibold text-muted">Email</span>
-          <input className="input" type="email" value={email} onChange={(event) => setEmail(event.target.value)} required />
+          <span className="mb-2 block text-sm font-semibold text-muted">Пользователь</span>
+          <input className="input" type="text" value={username} onChange={(event) => setUsername(event.target.value)} autoComplete="username" required />
+        </label>
+        <label className="mt-4 block">
+          <span className="mb-2 block text-sm font-semibold text-muted">Email, необязательно</span>
+          <input className="input" type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" />
         </label>
         <label className="mt-4 block">
           <span className="mb-2 block text-sm font-semibold text-muted">Имя</span>
@@ -155,7 +165,11 @@ export function AdminUsersManager() {
         </label>
         <label className="mt-4 block">
           <span className="mb-2 block text-sm font-semibold text-muted">Пароль</span>
-          <input className="input" type="password" value={password} onChange={(event) => setPassword(event.target.value)} minLength={8} required />
+          <input className="input" type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="new-password" minLength={8} required />
+        </label>
+        <label className="mt-4 block">
+          <span className="mb-2 block text-sm font-semibold text-muted">Подтверждение пароля</span>
+          <input className="input" type="password" value={passwordConfirm} onChange={(event) => setPasswordConfirm(event.target.value)} autoComplete="new-password" minLength={8} required />
         </label>
         {error && <p className="mt-4 text-sm text-danger">{error}</p>}
         {message && <p className="mt-4 text-sm text-emerald-700">{message}</p>}

@@ -4,6 +4,7 @@ import path from "node:path";
 
 const oldRoot = process.argv[2] ?? "/Users/romanbogachev/docker-projects/quiz";
 const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+const username = process.env.ADMIN_USERNAME ?? process.env.ADMIN_EMAIL?.split("@")[0] ?? "";
 const password = process.env.ADMIN_PASSWORD ?? "change-me";
 const dbPath = path.join(oldRoot, "data/db.sqlite3");
 const mediaRoot = path.join(oldRoot, "media");
@@ -44,7 +45,7 @@ async function login() {
   const response = await fetch(`${appUrl}/api/admin/login`, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ password })
+    body: JSON.stringify({ username, password })
   });
   if (!response.ok) {
     throw new Error(`Admin login failed: ${response.status} ${await response.text()}`);
